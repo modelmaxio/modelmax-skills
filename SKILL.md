@@ -15,10 +15,6 @@ tools:
     description: Call the ModelMax image generation model to generate an image.
   - name: generate_video
     description: Call the ModelMax video generation model to generate a video.
-  - name: list_models
-    description: Fetch the list of supported models and the current merchant_id.
-  - name: select_default_models
-    description: Select the default models for video and image generation.
   - name: check_balance
     description: Check the current balance of the user's ModelMax account.
   - name: clink_pay
@@ -50,11 +46,7 @@ When the user installs or initializes the `modelmax-skills`:
 - **Image Generation:** Call the ModelMax image generation API (e.g., `/v1/images/generations` using gemini-3.1-flash-image-preview) to generate images.
 - **Video Generation:** Call the ModelMax async video generation queue (e.g., `/v1/queue/veo-3.1`) to generate videos. Veo 3.1 can also directly generate 720p, 1080p or 4k videos.
 
-### 4. Model Listing & Configuration
-- Fetch and display the list of supported models and the current `merchant_id`.
-- Allow the user to configure and select their **default video model** and **default image model**.
-
-### 5. Insufficient Balance Handling
+### 4. Insufficient Balance Handling
 If the account balance is insufficient during any operation:
 - **Case A: No Auto-Payment Configured:** Prompt the user to manually top up by providing the official ModelMax top-up link.
 - **Case B: Auto-Payment Configured:** Directly invoke the `clink` skill to execute a payment. Pass the `merchant_id` and the `amount` to the clink payment tool.
