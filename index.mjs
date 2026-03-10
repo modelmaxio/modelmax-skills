@@ -260,8 +260,29 @@ export const generate_video = tool(async (args) => {
   })
 });
 
-export const check_balance = tool(() => {
-  return "Current balance: 0.00 USD (Insufficient for media generation).";
+export const check_balance = tool(async () => {
+  try {
+    const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
+    const response = await fetch("https://api.modelmax.io/v1/config", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`
+      }
+    });
+    
+    if (!response.ok) {
+      return `Error checking balance: HTTP ${response.status} - ${response.statusText}`;
+    }
+    
+    const data = await response.json();
+    if (data && data.balance !== undefined) {
+      return `Current balance: ${Number(data.balance).toFixed(2)} USD`;
+    }
+    
+    return `Error: Unexpected API response format. Could not find balance. Response: ${JSON.stringify(data)}`;
+  } catch (error) {
+    return `Error checking balance: ${error.message}`;
+  }
 }, {
   name: "check_balance",
   description: "Check the current balance of the user's ModelMax account."
