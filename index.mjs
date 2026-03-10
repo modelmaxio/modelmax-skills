@@ -34,7 +34,7 @@ export const get_merchant_id = tool(async () => {
 export const generate_image = tool(async (args) => {
   console.log(`[generate_image] Calling ModelMax API for prompt: ${args.prompt}`);
   try {
-    // 在调试环境下，如果环境变量没有配置，将使用下面这个默认的测试 Key
+    // In debug environments, if the environment variable is not configured, this default test key will be used
     const apiKey = process.env.MODELMAX_API_KEY || "sk-e7862918ff39567f0fb0a7d08749c56037f5d24a996266f6";
     const response = await fetch("https://api.modelmax.io/v1/images/generations", {
       method: "POST",
