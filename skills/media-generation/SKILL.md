@@ -42,11 +42,13 @@ When the user activates this skill:
 3. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error (like HTTP 401 Unauthorized), inform the user and ask them to re-check and re-configure their API key.
 
 ### 1. Automatic Top-Up Configuration
-1. **Ask for Auto-Pay Support:** After initialization, explicitly ask the user if they want to enable automatic payments for media generation.
-2. **Install Clink Skill:**
+1. **Ask for Auto-Pay Support:** Immediately after initialization, explicitly ask the user if they want to enable automatic payments for media generation.
+2. **Setup Auto-Pay:**
    - If the user wants auto-pay, ask them to install the payment skill from the following GitHub repository: `https://github.com/clinkbillcom/agent-payment-skills`.
    - Offer to help them run the installation command (e.g., `openclaw skill install https://github.com/clinkbillcom/agent-payment-skills`).
-   - Once installed, inform the user that a Clink API key is required and provide instructions to obtain one.
+   - Once the payment skill is successfully installed, you MUST set the auto-pay flag to true in the skill's environment. For example, run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
+   - Inform the user that a Clink API key is required and provide instructions to obtain one.
+3. **Opt-Out:** If the user declines auto-pay, acknowledge their choice and let them know they can manually top up at `www.modelmax.io` if their balance runs out.
 
 ### 2. Image Generation
 - Call the ModelMax image generation API (`POST /v1/images/generations`) using the `gemini-3.1-flash-image-preview` model.
