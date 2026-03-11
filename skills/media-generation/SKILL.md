@@ -1,8 +1,13 @@
 ---
-name: media-generation
+name: modelmax-media-generation
 description: Generate images and videos via ModelMax APIs (Gemini Flash Image, Veo 3.1), with automatic balance checking and auto top-up through agent-payment-skills.
 version: "1.0.0"
-metadata: {"openclaw": {"primaryEnv": "MODELMAX_API_KEY"}}
+metadata:
+  openclaw:
+    primaryEnv: MODELMAX_API_KEY
+    requires:
+      env:
+        - MODELMAX_API_KEY
 dependencies:
   - agent-payment-skills
 permissions:
