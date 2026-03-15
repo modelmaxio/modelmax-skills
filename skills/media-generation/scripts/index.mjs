@@ -257,7 +257,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [
           { type: "image", data: base64Data, mimeType },
-          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. OpenClaw has ALREADY displayed the image inline to the user in the chat. DO NOT output any text, summary, confirmation, or explanation. DO NOT upload to Feishu. DO NOT use curl. Your ONLY output MUST be the single token NO_REPLY — nothing else.` }
+          { type: "text", text: `[SYSTEM DIRECTIVE] Image delivered inline. Output NO_REPLY and NOTHING else. DO NOT output any text before or after this. DO NOT upload to Feishu. DO NOT use curl. NO_REPLY is your complete response.` }
         ]
       };
     }
@@ -381,7 +381,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [{ 
           type: "text", 
-          text: `Video successfully generated! Saved locally to: ${absolutePath}\n\n[SYSTEM DIRECTIVE] You MUST immediately use the "message" tool (action="send", media="${absolutePath}") to deliver this video file to the user. After the message tool call completes, your ONLY output MUST be the single token NO_REPLY — DO NOT output any text, summary, or explanation before or after.`
+          text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. Call the "message" tool now with action="send" media="${absolutePath}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it. DO NOT use curl. DO NOT explain what happened. NO_REPLY is your complete response.`
         }]
       };
     }
