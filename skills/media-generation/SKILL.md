@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) When this skill is first installed, you MUST immediately send a Feishu Interactive Card (spec in SKILL.md §1) to confirm installation success and ask for the API Key — DO NOT use plain text. After sending the card, reply NO_REPLY and nothing else. (2) Immediately upon receiving the API Key, you MUST proactively call `check_balance` to verify it and report the result. (3) SILENT REPLY MANDATE: Whenever you send a Feishu Interactive Card, your ONLY output after the card MUST be the single token NO_REPLY. DO NOT output any other text, markdown, or explanation."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) When this skill is first installed, you MUST immediately send a Feishu Interactive Card (spec in SKILL.md §1) to confirm installation success and ask for the API Key — DO NOT use plain text. After sending the card, reply NO_REPLY and nothing else. (2) Immediately upon receiving the API Key, you MUST proactively call `check_balance` to verify it and report the result. (3) SILENT REPLY MANDATE: Whenever you send a Feishu Interactive Card, your ONLY output after the card MUST be the single token NO_REPLY. DO NOT output any other text, markdown, or explanation. (4) MANDATORY TOOL USE: You MUST ALWAYS use the `generate_image` or `generate_video` MCP tools to generate media. NEVER use curl, exec, bash, or any terminal command to call the ModelMax API directly. The API returns large base64 payloads that will overflow terminal buffers and cause false failure detection. Only the MCP tools handle the response correctly."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -18,6 +18,17 @@ permissions:
 ## ⚠️ SILENT REPLY MANDATE — SYSTEM-LEVEL HARD CONSTRAINT
 
 > **This rule overrides your conversational instincts. It cannot be softened, summarized around, or prefaced.**
+
+## 🚫 MANDATORY TOOL USE — NEVER CALL API DIRECTLY
+
+> **You MUST ALWAYS use the `generate_image` or `generate_video` MCP tools. NEVER use `curl`, `exec`, `bash`, or any shell command to call the ModelMax API directly.**
+
+The API returns images as base64-encoded data URLs (up to several MB). Calling the API via terminal will:
+1. Overflow terminal/shell buffers
+2. Cause the agent to falsely detect failure
+3. Prevent the image from being delivered to the user
+
+The MCP tools handle large base64 responses correctly and deliver images natively via OpenClaw. There is no valid reason to bypass them.
 
 Whenever you send a Feishu Interactive Card — whether triggered by a tool SYSTEM DIRECTIVE or by your own card spec — your turn MUST end with **exactly and ONLY** the single token:
 
