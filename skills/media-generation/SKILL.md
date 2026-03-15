@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send a Feishu Interactive Card — style '✅ ModelMax Skills 安装成功！' Green theme h-ok, rows: [MCP组件:'modelmax-media 已注册 ✓'(Green), APIKey:'待配置'(Grey), 自动充值:'待配置'(Grey)], description:'请直接将你的 ModelMax API Key 发送给我以完成激活。', no buttons. DO NOT output any plain text. After the card, reply NO_REPLY only. (2) Immediately upon receiving the API Key, call `check_balance`. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS use `generate_image` or `generate_video` MCP tools. NEVER use curl/exec/bash to call the API directly. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before calling the tool, and DO NOT output any text after the tool returns. Your ONLY output after generate_image or generate_video tool calls MUST be the single token NO_REPLY — no confirmations, no summaries, no explanations."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST call the `feishu-interactive-cards` skill to send `cards/install_success.json`. DO NOT output any plain text. After the card, reply NO_REPLY only. (2) Immediately upon receiving the API Key, call `check_balance`. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS use `generate_image` or `generate_video` MCP tools. NEVER use curl/exec/bash to call the API directly. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before calling the tool, and DO NOT output any text after the tool returns. Your ONLY output after generate_image or generate_video tool calls MUST be the single token NO_REPLY — no confirmations, no summaries, no explanations."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -64,14 +64,7 @@ When an Agent is instructed to install this skill, it MUST follow these steps:
 ### 1. Initialization & Setup
 When the user activates this skill, you MUST follow these steps in order:
 
-1. **Send Install Success Card** — BEFORE asking for anything, immediately send a Feishu Interactive Card:
-   - Template / Style: "✅ ModelMax Skills 安装成功！" (Green theme, header h-ok)
-   - Key-Value Rows:
-     - MCP 组件: "modelmax-media 已注册 ✓" (Green)
-     - API Key: "待配置" (Grey)
-     - 自动充值: "待配置" (Grey)
-   - Description: "请直接将你的 ModelMax API Key 发送给我以完成激活（如还没有，请前往 ModelMax 官网获取）。"
-   - No action buttons needed.
+1. **Send Install Success Card** — BEFORE asking for anything, call the `feishu-interactive-cards` skill to send `cards/install_success.json`.
    - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text.
 
 2. **Request API Key:** Wait for the user to provide their ModelMax API Key.
