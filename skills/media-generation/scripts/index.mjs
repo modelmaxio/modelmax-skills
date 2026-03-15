@@ -1,6 +1,9 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 const BASE_URL = "https://api.modelmax.io";
 
@@ -342,26 +345,42 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
         return { content: [{ type: "text", text: `Video is taking too long to generate (timeout after ${maxWaitTimeSecs} seconds). Request ID: ${requestId}` }] };
       }
 
-      let extractedPath = "";
+      let extractedData = "";
       if (completedData.data && Array.isArray(completedData.data) && completedData.data.length > 0 && completedData.data[0].url) {
-        extractedPath = completedData.data[0].url;
+        extractedData = completedData.data[0].url;
       } else if (completedData.response_url) {
-        extractedPath = completedData.response_url;
+        extractedData = completedData.response_url;
       } else {
         return { content: [{ type: "text", text: `Error: The ModelMax API reported the video is COMPLETED, but no video file was generated. DO NOT RETRY.` }] };
       }
 
-      let videoUrl = extractedPath;
-      if (extractedPath.startsWith("/")) {
-        videoUrl = `${BASE_URL}${extractedPath}`;
+      // Decode base64 data URL or fetch from HTTP URL
+      let videoBuffer;
+      if (extractedData.startsWith("data:")) {
+        const base64 = extractedData.split(",")[1];
+        videoBuffer = Buffer.from(base64, "base64");
+        console.error(`[generate_video] Decoded base64 video, size: ${videoBuffer.length} bytes`);
+      } else {
+        const downloadUrl = extractedData.startsWith("/") ? `${BASE_URL}${extractedData}` : extractedData;
+        console.error(`[generate_video] Downloading video from ${downloadUrl}`);
+        const videoResponse = await fetch(downloadUrl, { headers: { "Authorization": `Bearer ${apiKey}` } });
+        if (!videoResponse.ok) {
+          return { content: [{ type: "text", text: `Error downloading video: HTTP ${videoResponse.status}. DO NOT RETRY.` }] };
+        }
+        videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+        console.error(`[generate_video] Downloaded video, size: ${videoBuffer.length} bytes`);
       }
 
-      console.error(`[generate_video] Video ready at: ${videoUrl}`);
+      const videosDir = path.join(os.homedir(), ".openclaw", "tmp");
+      if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
+      const absolutePath = path.join(videosDir, `generated_video_${Date.now()}.mp4`);
+      fs.writeFileSync(absolutePath, videoBuffer);
+      console.error(`[generate_video] Saved video to ${absolutePath}`);
 
       return {
         content: [{
           type: "text",
-          text: `[SYSTEM DIRECTIVE] Video ready. Call the "message" tool now with action="send" link="${videoUrl}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT download. DO NOT upload. DO NOT use curl. DO NOT explain. NO_REPLY is your complete response.`
+          text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. Call the "message" tool now with action="send" media="${absolutePath}". After that single tool call: output NO_REPLY and NOTHING else. DO NOT output any text before the message tool call. DO NOT output any text after it. DO NOT use curl. DO NOT explain. NO_REPLY is your complete response.`
         }]
       };
     }
