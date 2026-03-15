@@ -72,7 +72,14 @@ Immediately after `check_balance` succeeds, you MUST send a Feishu Interactive C
 **If user clicks "开启自动充值" or replies affirmatively:**
 1. **MANDATORY CHECK**: You MUST execute the `exec` tool with the command `ls -la ~/.openclaw/workspace/skills/agent-payment-skills` to physically verify if the payment skill is installed. DO NOT rely on your conversation memory.
 2. **If the directory DOES NOT exist**:
-   You MUST pause the setup and reply: "⚠️ 检测到系统尚未安装底层的 Clink 支付组件，自动充值需要依赖此组件。是否授权我为您拉取并安装 `https://github.com/clinkbillcom/agent-payment-skills`？"
+   You MUST pause the setup and immediately send a Feishu Interactive Card to the user:
+   - Template / Style: "⚠️ 缺少支付组件依赖" (Orange/Warning theme, header h-warn)
+   - Key-Value Rows:
+     - Clink 支付组件: "未安装" (Red)
+     - 自动充值功能: "暂停配置" (Orange)
+   - Description: "检测到系统尚未安装底层的 Clink 支付组件。是否授权我为您从 `https://github.com/clinkbillcom/agent-payment-skills` 拉取并安装？\\n\\n请在下方输入框回复您的授权指令（或一键复制下方口令）："
+   - Markdown Element (Code block): \`\`\`text\n授权安装\n\`\`\`
+   - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
 3. **If the directory EXISTS** (or after it has been successfully installed):
    Use the `exec` tool to run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
 3. Send a confirmation Feishu card:
