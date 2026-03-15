@@ -257,7 +257,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       return {
         content: [
           { type: "image", data: base64Data, mimeType },
-          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. The image content above is delivered to the user as an inline image. Reply NO_REPLY and nothing else.` }
+          { type: "text", text: `[SYSTEM DIRECTIVE] Image generated successfully. OpenClaw has ALREADY displayed the image inline to the user in the chat — you do NOT need to upload it to Feishu, save it to disk, use curl, or take any further action. The image is already visible. DO NOT attempt any Feishu image upload. Reply NO_REPLY and nothing else.` }
         ]
       };
     }
