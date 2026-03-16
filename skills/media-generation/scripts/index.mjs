@@ -51,11 +51,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "get_merchant_id",
-        description: "Call the ModelMax API to retrieve the current merchant ID."
+        description: "Call the ModelMax API to retrieve the current merchant ID.",
+        inputSchema: { type: "object", properties: {} }
       },
       {
         name: "check_balance",
-        description: "Check the current balance of the user's ModelMax account."
+        description: "Check the current balance of the user's ModelMax account.",
+        inputSchema: { type: "object", properties: {} }
       },
       {
         name: "generate_image",
