@@ -61,7 +61,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_image",
-        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. This tool handles the response correctly and delivers the image inline to the user via OpenClaw. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. Your ONLY output after this tool call MUST be the single token NO_REPLY.",
+        description: "MANDATORY: You MUST call this tool to generate images. NEVER use curl, exec, bash, scripts, or any shell command to call the ModelMax API directly — the API returns multi-megabyte base64 payloads that overflow terminal buffers and cause false failure detection. DO NOT write your own polling scripts. DO NOT write your own Feishu upload scripts. This tool handles everything internally: API call, polling, base64 decode, and delivery. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. Your ONLY output after this tool call MUST be the single token NO_REPLY.",
         inputSchema: {
           type: "object",
           properties: {
@@ -83,7 +83,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "generate_video",
-        description: "MANDATORY: You MUST call this tool to generate videos. NEVER use curl, exec, bash, or any shell command to call the ModelMax API directly. Note: 1080p and 4k MUST be exactly 8 seconds. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. After sending the video via the message tool, your ONLY output MUST be the single token NO_REPLY.",
+        description: "MANDATORY: You MUST call this tool to generate videos. NEVER use curl, exec, bash, scripts, or any shell command to call the ModelMax API directly. DO NOT write your own polling scripts. DO NOT write your own download scripts. DO NOT write your own Feishu upload scripts. This tool handles everything internally: task submission, polling until complete, base64 decode, saving to disk. After this tool returns, call the message tool with the file path, then output NO_REPLY and NOTHING else. Note: 1080p and 4k MUST be exactly 8 seconds. STRICT SILENCE RULE: DO NOT output any text before calling this tool. DO NOT output any text after this tool returns. After sending the video via the message tool, your ONLY output MUST be the single token NO_REPLY.",
         inputSchema: {
           type: "object",
           properties: {
