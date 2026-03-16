@@ -329,14 +329,11 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
           console.error(`[generate_video] Polling status (${i+1}/${maxPolls}): ${currentStatus}`);
 
           if (currentStatus === "COMPLETED" || currentStatus === "SUCCESS" || currentStatus === "succeeded") {
-            // Try multiple known response shapes
-            const veoUri = statusData.provider_response?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
-            const dataUrl = statusData.data && Array.isArray(statusData.data) && statusData.data.length > 0 && statusData.data[0].url;
-            if (veoUri || dataUrl) {
+            if (statusData.data && Array.isArray(statusData.data) && statusData.data.length > 0 && statusData.data[0].url) {
               completedData = statusData;
               break;
             } else {
-              console.error(`[generate_video] Status is COMPLETED but video URL not yet available. Waiting...`);
+              console.error(`[generate_video] Status is COMPLETED but data array is not yet available. Waiting...`);
             }
           } else if (currentStatus === "FAILED" || currentStatus === "failed" || currentStatus === "ERROR") {
             return { content: [{ type: "text", text: `Video generation failed during processing. Status: ${currentStatus}` }] };
@@ -351,10 +348,7 @@ After sending the card, your turn MUST end with exactly and ONLY the token NO_RE
       }
 
       let extractedData = "";
-      const veoUri = completedData.provider_response?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
-      if (veoUri) {
-        extractedData = veoUri;
-      } else if (completedData.data && Array.isArray(completedData.data) && completedData.data.length > 0 && completedData.data[0].url) {
+      if (completedData.data && Array.isArray(completedData.data) && completedData.data.length > 0 && completedData.data[0].url) {
         extractedData = completedData.data[0].url;
       } else if (completedData.response_url) {
         extractedData = completedData.response_url;
