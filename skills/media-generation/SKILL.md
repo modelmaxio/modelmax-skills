@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. DO NOT output any plain text. After the card, reply NO_REPLY only. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) Immediately upon receiving the API Key, call `check_balance`. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS use `generate_image` or `generate_video` MCP tools. NEVER use curl/exec/bash/scripts to call the API directly. DO NOT write your own polling scripts, download scripts, or Feishu upload scripts — the MCP tools handle everything internally. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before calling the tool, and DO NOT output any text after the tool returns. Your ONLY output after generate_image or generate_video tool calls MUST be the single token NO_REPLY — no confirmations, no summaries, no explanations."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. DO NOT output any plain text. After the card, reply NO_REPLY only. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) Immediately upon receiving the API Key, call `check_balance`. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via: npx mcporter call modelmax-media generate_image --args '{\"prompt\":\"...\"}' (do NOT omit --args). NEVER use curl or direct API calls. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before the tool call, and DO NOT output any text after the tool returns. Your ONLY output MUST be the single token NO_REPLY."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -19,16 +19,19 @@ permissions:
 
 > **This rule overrides your conversational instincts. It cannot be softened, summarized around, or prefaced.**
 
-## 🚫 MANDATORY TOOL USE — NEVER CALL API DIRECTLY
+## 🚫 ALWAYS USE mcporter — NEVER CALL API DIRECTLY
 
-> **You MUST ALWAYS use the `generate_image` or `generate_video` MCP tools. NEVER use `curl`, `exec`, `bash`, or any shell command to call the ModelMax API directly.**
+> **ALWAYS call `generate_image` and `generate_video` via `npx mcporter call`. Do NOT omit `--args`. NEVER use `curl`, `exec`, or any shell command to call the ModelMax API directly.**
 
-The API returns images as base64-encoded data URLs (up to several MB). Calling the API via terminal will:
-1. Overflow terminal/shell buffers
-2. Cause the agent to falsely detect failure
-3. Prevent the image from being delivered to the user
+```bash
+# Generate image — delivers directly to Feishu
+npx mcporter call modelmax-media generate_image --args '{"prompt":"<PROMPT>","chat_id":"<CHAT_ID>"}'
 
-The MCP tools handle large base64 responses correctly and deliver images natively via OpenClaw. There is no valid reason to bypass them.
+# Generate video — delivers directly to Feishu
+npx mcporter call modelmax-media generate_video --args '{"prompt":"<PROMPT>","resolution":"720p","duration_seconds":5,"chat_id":"<CHAT_ID>"}'
+```
+
+Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
 
 Whenever you send a Feishu Interactive Card — whether triggered by a tool SYSTEM DIRECTIVE or by your own card spec — your turn MUST end with **exactly and ONLY** the single token:
 
@@ -108,7 +111,11 @@ When the user activates this skill, you MUST follow these steps in order:
 
 2. **Request API Key:** Wait for the user to provide their ModelMax API Key.
 3. **Configuration:** Guide the user to obtain an API key from [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
-4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately invoke the `check_balance` tool. This verifies that the key is valid and checks the account balance before any media generation starts. If `check_balance` returns an error, inform the user to re-check their API key.
+4. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` (do NOT omit --args):
+   ```
+   npx mcporter call modelmax-media check_balance --args '{}'
+   ```
+   If `check_balance` returns an error, inform the user to re-check their API key.
 
 ### 2. Automatic Top-Up Configuration
 Immediately after `check_balance` succeeds, you MUST send a card to ask about Auto-Pay:
@@ -153,7 +160,10 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
    - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
    - After the user sends "授权安装", follow the `agent-payment-skills` installation and initialization flow completely (wallet init + card binding). Once initialization is confirmed complete, proceed to step 3.
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
-   - Call `agent-payment-skills.pre_check_account` to verify the payment account is ready (wallet initialized, payment method bound).
+   - Call `agent-payment-skills.pre_check_account` (do NOT omit --args):
+     ```
+     npx mcporter call agent-payment-skills pre_check_account --args '{}'
+     ```
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT set the env var until pre-check passes.
    - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `/config set skills.entries.modelmax-media-generation.env.MODELMAX_AUTO_PAY true`
    - After the exec command succeeds, **immediately** send ONE final confirmation card:
