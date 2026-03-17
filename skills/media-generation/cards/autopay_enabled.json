@@ -1,34 +1,24 @@
 {
-  "schema": "2.0",
+  "config": { "wide_screen_mode": true },
   "header": {
-    "title": { "tag": "plain_text", "content": "✅ 自动充值已开启" },
+    "title": { "content": "✅ 自动充值已开启", "tag": "plain_text" },
     "template": "green"
   },
-  "body": {
-    "elements": [
-      {
-        "tag": "column_set",
-        "flex_mode": "none",
-        "columns": [
-          {
-            "tag": "column",
-            "elements": [
-              { "tag": "markdown", "content": "**自动充值**\n**支付渠道**" }
-            ]
-          },
-          {
-            "tag": "column",
-            "elements": [
-              { "tag": "markdown", "content": "<font color='green'>已开启 ✓</font>\n<font color='green'>Clink Payment Skill</font>" }
-            ]
-          }
-        ]
-      },
-      { "tag": "hr" },
-      {
-        "tag": "markdown",
-        "content": "余额不足时将自动触发充值，无需手动干预。"
+  "elements": [
+    {
+      "tag": "div",
+      "text": {
+        "content": "<font color='green'>**自动充值**</font>　　已开启 ✓\n<font color='green'>**支付渠道**</font>　　Clink Payment Skill",
+        "tag": "lark_md"
       }
-    ]
-  }
+    },
+    { "tag": "hr" },
+    {
+      "tag": "div",
+      "text": {
+        "content": "余额不足时将自动触发充值，无需手动干预。",
+        "tag": "lark_md"
+      }
+    }
+  ]
 }
