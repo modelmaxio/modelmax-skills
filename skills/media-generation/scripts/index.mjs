@@ -31,8 +31,8 @@ After clink_pay succeeds and the order.succeeded webhook confirms payment, invok
 The following tools come from the \`agent-payment-skills\` skill. You MUST immediately follow these steps in order:
 1. Invoke \`agent-payment-skills.pre_check_account\` to verify wallet and payment method are ready. This will display a "🔍 Clink 账户检测通过" card to the user.
    - If pre-check fails, follow its instructions to fix (initialize wallet / bind card) before proceeding.
-2. Call \`get_merchant_id\` to obtain the merchant ID and default recharge amount.
-3. Invoke \`agent-payment-skills.clink_pay\` using the merchant_id and default_recharge_amount returned by \`get_merchant_id\`. Do NOT ask the user for an amount.
+2. Call \`get_payment_config\` to obtain the merchant ID and default recharge amount.
+3. Invoke \`agent-payment-skills.clink_pay\` using the merchant_id and default_recharge_amount returned by \`get_payment_config\`. Do NOT ask the user for an amount.
    If you must call via shell, use this EXACT command (do NOT omit --args, replace placeholders):
    \`\`\`
    npx mcporter call agent-payment-skills clink_pay --args '{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD"}'
@@ -55,8 +55,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "get_merchant_id",
-        description: "Call the ModelMax API to retrieve the current merchant ID.",
+        name: "get_payment_config",
+        description: "Retrieve ModelMax payment config: merchant_id, default_recharge_amount, and currency.",
         inputSchema: { type: "object", properties: {} }
       },
       {
@@ -120,7 +120,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   try {
-    if (toolName === "get_merchant_id") {
+    if (toolName === "get_payment_config") {
       const response = await fetch(`${BASE_URL}/v1/config`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${apiKey}` }
