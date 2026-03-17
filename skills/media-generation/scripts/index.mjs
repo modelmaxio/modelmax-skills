@@ -149,8 +149,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 - Key-Value Rows:
   - 当前余额: "$${balance} USD" (${low ? 'Red' : 'Green'})
   - 账户状态: "${low ? '余额偏低，建议及时充值' : '正常'}" (${low ? 'Red' : 'Green'})
-- Description: "${low ? '余额低于 $5，可能影响正在运行的任务，建议立即充值。' : '账户余额充足，可正常执行充值任务。'}"
-${low ? "- Button 1 (Primary): \"立即充值\" (url: https://www.modelmax.io)" : "- No action buttons needed."}
+- Description: "${low ? '余额低于 $5，可能影响正在运行的任务，建议立即充值。开启自动充值后，余额不足时将自动补充，无需手动操作。' : '账户余额充足，可正常执行充值任务。'}"
+${low ? `- Button 1 (Primary): "立即充值" (url: https://www.modelmax.io)
+- Button 2 (ghost): "开启自动充值" (action: trigger Clink payment skill installation and setup flow)` : "- No action buttons needed."}
 
 After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text, markdown, or explanation.` }] };
       }
