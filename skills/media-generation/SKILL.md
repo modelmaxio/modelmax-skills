@@ -153,9 +153,9 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
      ```bash
      node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/missing_payment_skill.json --chat-id {current_feishu_chat_id}
      ```
-   - **Non-Feishu channel:** Send plain text: "⚠️ Clink payment component not installed. Reply '授权安装' to install from https://github.com/clinkbillcom/agent-payment-skills"
+   - **Non-Feishu channel:** Send plain text: "⚠️ Clink payment component not installed. Please install from https://github.com/clinkbillcom/agent-payment-skills"
    - **CRITICAL**: After sending the card, your turn MUST end with exactly and ONLY the token NO_REPLY. DO NOT output any other text or explanation.
-   - After the user sends "授权安装", follow the `agent-payment-skills` installation and initialization flow completely (wallet init + card binding). Once initialization is confirmed complete, proceed to step 3.
+   - Follow the `agent-payment-skills` installation flow completely (pre_install → restart → wallet init + card binding). Once initialization is confirmed complete, proceed to step 3.
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
    - Call `agent-payment-skills.pre_check_account` (do NOT omit --args):
      ```
