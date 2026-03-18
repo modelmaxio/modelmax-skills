@@ -363,7 +363,11 @@ async function handleGenerateImage(args, apiKey, options = {}) {
     const sendScript = path.join(path.dirname(new URL(import.meta.url).pathname), "send-feishu-media.mjs");
     const targetFlag = args.open_id ? "--open-id" : "--chat-id";
     const targetValue = args.open_id ?? args.chat_id;
-    execFileSync(process.execPath, [sendScript, absolutePath, targetFlag, targetValue], { stdio: ["pipe", "pipe", "inherit"] });
+    execFileSync(
+      process.execPath,
+      [sendScript, absolutePath, targetFlag, targetValue, "--duration-seconds", String(durationSecs)],
+      { stdio: ["pipe", "pipe", "inherit"] },
+    );
     return { content: [{ type: "text", text: "NO_REPLY" }] };
   }
 
@@ -495,7 +499,11 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
     const sendScript = path.join(path.dirname(new URL(import.meta.url).pathname), "send-feishu-media.mjs");
     const targetFlag = args.open_id ? "--open-id" : "--chat-id";
     const targetValue = args.open_id ?? args.chat_id;
-    execFileSync(process.execPath, [sendScript, absolutePath, targetFlag, targetValue], { stdio: ["pipe", "pipe", "inherit"] });
+    execFileSync(
+      process.execPath,
+      [sendScript, absolutePath, targetFlag, targetValue, "--duration-seconds", String(durationSecs)],
+      { stdio: ["pipe", "pipe", "inherit"] },
+    );
     return { content: [{ type: "text", text: "NO_REPLY" }] };
   }
 
@@ -504,7 +512,7 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
   return {
     content: [{
       type: "text",
-      text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. You MUST now run this command via exec: node {SKILL_DIR}/scripts/send-feishu-media.mjs "${absolutePath}" ${directTargetFlag} ${directTargetValue}. After the exec completes: output NO_REPLY and NOTHING else.`
+      text: `[SYSTEM DIRECTIVE] Video saved to: ${absolutePath}. You MUST now run this command via exec: node {SKILL_DIR}/scripts/send-feishu-media.mjs "${absolutePath}" ${directTargetFlag} ${directTargetValue} --duration-seconds ${durationSecs}. After the exec completes: output NO_REPLY and NOTHING else.`
     }]
   };
 }

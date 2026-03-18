@@ -2,7 +2,7 @@
 /**
  * Standalone Feishu media sender — no external dependencies.
  * Images are uploaded via /im/v1/images and sent as msg_type:"image" (renders inline).
- * Videos are uploaded via /im/v1/files as video files and sent as msg_type:"media" with a cover image.
+ * Videos are uploaded via /im/v1/files as video files and sent as msg_type:"media" with a default cover image.
  * Other files are uploaded via /im/v1/files and sent as msg_type:"file".
  * Reads Feishu credentials from ~/.openclaw/openclaw.json.
  *
@@ -13,17 +13,17 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
 
 // --- Parse args ---
 const args = process.argv.slice(2);
 let filePath = null;
 let chatId = null;
 let openId = null;
+let durationSeconds = null;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
-  if (arg === '--chat-id' || arg === '--open-id') {
+  if (arg === '--chat-id' || arg === '--open-id' || arg === '--duration-seconds') {
     const val = args[i + 1];
     if (!val || val.startsWith('--')) {
       console.error(`Error: ${arg} requires a value`);
@@ -33,6 +33,7 @@ for (let i = 0; i < args.length; i++) {
     i++;
     if (arg === '--chat-id') chatId = val;
     if (arg === '--open-id') openId = val;
+    if (arg === '--duration-seconds') durationSeconds = Number(val);
   } else if (!arg.startsWith('--')) {
     filePath = arg;
   }
@@ -74,6 +75,8 @@ const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 const videoExts = ['mp4', 'mov', 'avi'];
 const isImage = imageExts.includes(ext);
 const isVideo = videoExts.includes(ext);
+const DEFAULT_VIDEO_COVER_BASE64 =
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAADAQAAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6gD/xAAXEAADAQAAAAAAAAAAAAAAAAAAAREh/9oACAEBAAEFAmP/xAAVEQEBAAAAAAAAAAAAAAAAAAABEP/aAAgBAwEBPwFH/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwFH/8QAFxAAAwEAAAAAAAAAAAAAAAAAAAERIf/aAAgBAQAGPwJr/8QAFhABAQEAAAAAAAAAAAAAAAAAARAR/9oACAEBAAE/IVUf/9k=';
 
 // --- Load OpenClaw config ---
 const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
@@ -142,53 +145,28 @@ async function uploadImageFile(token, sourcePath) {
   return data.data.image_key;
 }
 
-function probeVideoDurationSeconds(sourcePath) {
-  const raw = execFileSync(
-    'ffprobe',
-    [
-      '-v',
-      'error',
-      '-show_entries',
-      'format=duration',
-      '-of',
-      'default=nokey=1:noprint_wrappers=1',
-      sourcePath,
-    ],
-    { encoding: 'utf8' },
-  ).trim();
-  const seconds = Math.max(1, Math.round(Number(raw)));
-  if (!Number.isFinite(seconds)) {
-    throw new Error(`Unable to determine video duration for ${sourcePath}`);
-  }
-  return seconds;
+async function uploadImageBuffer(token, fileBuffer, fileName, mimeType) {
+  const formData = new FormData();
+  formData.append('image_type', 'message');
+  formData.append('image', new Blob([fileBuffer], { type: mimeType }), fileName);
+
+  const res = await fetch('https://open.feishu.cn/open-apis/im/v1/images', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Image upload HTTP ${res.status}: ${res.statusText}`);
+  const data = await res.json();
+  if (data.code !== 0) throw new Error(`Image upload failed: ${data.msg} (code: ${data.code})`);
+  return data.data.image_key;
 }
 
-function extractVideoCoverImage(sourcePath) {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'feishu-video-cover-'));
-  const coverPath = path.join(tempDir, `${path.basename(sourcePath, path.extname(sourcePath))}.jpg`);
-  try {
-    execFileSync(
-      'ffmpeg',
-      ['-y', '-i', sourcePath, '-frames:v', '1', '-q:v', '2', coverPath],
-      { stdio: ['ignore', 'ignore', 'pipe'] },
-    );
-    if (!fs.existsSync(coverPath)) {
-      throw new Error(`Cover image was not created for ${sourcePath}`);
-    }
-    return {
-      coverPath,
-      cleanup() {
-        try {
-          fs.rmSync(tempDir, { recursive: true, force: true });
-        } catch {}
-      },
-    };
-  } catch (error) {
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch {}
-    throw error;
+function resolveVideoDurationSeconds() {
+  const seconds = Math.max(1, Math.round(Number(durationSeconds ?? 0)));
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 5;
   }
+  return seconds;
 }
 
 async function uploadFile(token, sourcePath, options = {}) {
@@ -245,15 +223,10 @@ async function sendMessage(token, msgType, content) {
     const imageKey = await uploadImageFile(token, absoluteFilePath);
     await sendMessage(token, 'image', { image_key: imageKey });
   } else if (isVideo) {
-    const durationSeconds = probeVideoDurationSeconds(absoluteFilePath);
-    const cover = extractVideoCoverImage(absoluteFilePath);
-    try {
-      const imageKey = await uploadImageFile(token, cover.coverPath);
-      const fileKey = await uploadFile(token, absoluteFilePath, { durationSeconds });
-      await sendMessage(token, 'media', { file_key: fileKey, image_key: imageKey });
-    } finally {
-      cover.cleanup();
-    }
+    const coverBuffer = Buffer.from(DEFAULT_VIDEO_COVER_BASE64, 'base64');
+    const imageKey = await uploadImageBuffer(token, coverBuffer, 'video-cover.jpg', 'image/jpeg');
+    const fileKey = await uploadFile(token, absoluteFilePath, { durationSeconds: resolveVideoDurationSeconds() });
+    await sendMessage(token, 'media', { file_key: fileKey, image_key: imageKey });
   } else {
     const fileKey = await uploadFile(token, absoluteFilePath);
     await sendMessage(token, 'file', { file_key: fileKey });
