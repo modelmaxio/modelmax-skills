@@ -150,7 +150,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             { tag: "hr" },
             { tag: "markdown", content: "余额低于 $5，可能影响正在运行的任务，建议立即充值。" },
             { tag: "action", actions: [{ tag: "button", text: { content: "立即充值", tag: "plain_text" }, type: "primary", url: "https://www.modelmax.io" }] },
-            { tag: "markdown", content: "```text\n开启自动充值\n```" },
+            { tag: "markdown", content: "```\n开启自动充值\n```" },
             { tag: "markdown", content: "复制上方口令发送给我，即可开启余额不足时自动充值功能。" }
           ]}
         }) : JSON.stringify({
