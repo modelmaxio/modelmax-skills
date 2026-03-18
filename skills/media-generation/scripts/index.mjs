@@ -429,7 +429,7 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
   console.error(`[generate_video] Task submitted successfully. Request ID: ${requestId}. Polling for completion...`);
 
   let completedData = null;
-  const maxWaitTimeSecs = Math.ceil(durationSecs * (120 / 8));
+  const maxWaitTimeSecs = Math.max(120, Math.ceil(durationSecs * (120 / 8)));
   const maxPolls = Math.ceil(maxWaitTimeSecs / 5);
 
   for (let i = 0; i < maxPolls; i++) {

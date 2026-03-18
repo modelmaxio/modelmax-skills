@@ -2,7 +2,8 @@
 /**
  * Standalone Feishu media sender — no external dependencies.
  * Images are uploaded via /im/v1/images and sent as msg_type:"image" (renders inline).
- * Videos/other files are uploaded via /im/v1/files and sent as msg_type:"file".
+ * Videos are uploaded via /im/v1/files as video files and sent as msg_type:"media" with a cover image.
+ * Other files are uploaded via /im/v1/files and sent as msg_type:"file".
  * Reads Feishu credentials from ~/.openclaw/openclaw.json.
  *
  * Usage:
@@ -12,6 +13,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { execFileSync } from 'child_process';
 
 // --- Parse args ---
 const args = process.argv.slice(2);
@@ -56,7 +58,6 @@ if (!filePath) {
   process.exit();
 }
 
-// Expand ~ to home directory
 const expanded = filePath.startsWith('~/')
   ? path.join(os.homedir(), filePath.slice(2))
   : filePath;
@@ -68,10 +69,11 @@ if (!fs.existsSync(absoluteFilePath)) {
   process.exit();
 }
 
-// Detect media type by extension
 const ext = path.extname(absoluteFilePath).toLowerCase().slice(1);
 const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+const videoExts = ['mp4', 'mov', 'avi'];
 const isImage = imageExts.includes(ext);
+const isVideo = videoExts.includes(ext);
 
 // --- Load OpenClaw config ---
 const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
@@ -97,7 +99,6 @@ if (!account?.appId || !account?.appSecret) {
   process.exit();
 }
 
-// --- Feishu API calls ---
 async function getTenantAccessToken() {
   const res = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
     method: 'POST',
@@ -110,15 +111,25 @@ async function getTenantAccessToken() {
   return data.tenant_access_token;
 }
 
-async function uploadImage(token) {
-  const fileBuffer = fs.readFileSync(absoluteFilePath);
-  const mimeTypes = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
-  const mimeType = mimeTypes[ext] || 'image/png';
-  const fileName = path.basename(absoluteFilePath);
+function inferImageMimeType(sourcePath) {
+  const sourceExt = path.extname(sourcePath).toLowerCase().slice(1);
+  const mimeTypes = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+  };
+  return mimeTypes[sourceExt] || 'image/jpeg';
+}
+
+async function uploadImageFile(token, sourcePath) {
+  const fileBuffer = fs.readFileSync(sourcePath);
+  const fileName = path.basename(sourcePath);
 
   const formData = new FormData();
   formData.append('image_type', 'message');
-  formData.append('image', new Blob([fileBuffer], { type: mimeType }), fileName);
+  formData.append('image', new Blob([fileBuffer], { type: inferImageMimeType(sourcePath) }), fileName);
 
   const res = await fetch('https://open.feishu.cn/open-apis/im/v1/images', {
     method: 'POST',
@@ -131,15 +142,68 @@ async function uploadImage(token) {
   return data.data.image_key;
 }
 
-async function uploadFile(token) {
-  const fileBuffer = fs.readFileSync(absoluteFilePath);
-  const fileName = path.basename(absoluteFilePath);
+function probeVideoDurationSeconds(sourcePath) {
+  const raw = execFileSync(
+    'ffprobe',
+    [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=nokey=1:noprint_wrappers=1',
+      sourcePath,
+    ],
+    { encoding: 'utf8' },
+  ).trim();
+  const seconds = Math.max(1, Math.round(Number(raw)));
+  if (!Number.isFinite(seconds)) {
+    throw new Error(`Unable to determine video duration for ${sourcePath}`);
+  }
+  return seconds;
+}
+
+function extractVideoCoverImage(sourcePath) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'feishu-video-cover-'));
+  const coverPath = path.join(tempDir, `${path.basename(sourcePath, path.extname(sourcePath))}.jpg`);
+  try {
+    execFileSync(
+      'ffmpeg',
+      ['-y', '-i', sourcePath, '-frames:v', '1', '-q:v', '2', coverPath],
+      { stdio: ['ignore', 'ignore', 'pipe'] },
+    );
+    if (!fs.existsSync(coverPath)) {
+      throw new Error(`Cover image was not created for ${sourcePath}`);
+    }
+    return {
+      coverPath,
+      cleanup() {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch {}
+      },
+    };
+  } catch (error) {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {}
+    throw error;
+  }
+}
+
+async function uploadFile(token, sourcePath, options = {}) {
+  const fileBuffer = fs.readFileSync(sourcePath);
+  const fileName = path.basename(sourcePath);
+  const sourceExt = path.extname(sourcePath).toLowerCase().slice(1);
   const fileTypes = { mp4: 'mp4', mov: 'mov', avi: 'avi', pdf: 'pdf', doc: 'doc', xls: 'xls', ppt: 'ppt' };
-  const fileType = fileTypes[ext] || 'stream';
+  const fileType = fileTypes[sourceExt] || 'stream';
 
   const formData = new FormData();
   formData.append('file_type', fileType);
   formData.append('file_name', fileName);
+  if (typeof options.durationSeconds === 'number' && Number.isFinite(options.durationSeconds) && options.durationSeconds > 0) {
+    formData.append('duration', String(options.durationSeconds));
+  }
   formData.append('file', new Blob([fileBuffer]), fileName);
 
   const res = await fetch('https://open.feishu.cn/open-apis/im/v1/files', {
@@ -178,10 +242,20 @@ async function sendMessage(token, msgType, content) {
 (async () => {
   const token = await getTenantAccessToken();
   if (isImage) {
-    const imageKey = await uploadImage(token);
+    const imageKey = await uploadImageFile(token, absoluteFilePath);
     await sendMessage(token, 'image', { image_key: imageKey });
+  } else if (isVideo) {
+    const durationSeconds = probeVideoDurationSeconds(absoluteFilePath);
+    const cover = extractVideoCoverImage(absoluteFilePath);
+    try {
+      const imageKey = await uploadImageFile(token, cover.coverPath);
+      const fileKey = await uploadFile(token, absoluteFilePath, { durationSeconds });
+      await sendMessage(token, 'media', { file_key: fileKey, image_key: imageKey });
+    } finally {
+      cover.cleanup();
+    }
   } else {
-    const fileKey = await uploadFile(token);
+    const fileKey = await uploadFile(token, absoluteFilePath);
     await sendMessage(token, 'file', { file_key: fileKey });
   }
 })().catch(e => {
