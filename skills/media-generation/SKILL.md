@@ -87,24 +87,21 @@ Replace `{SKILL_DIR}` with the actual skill directory path (e.g. `~/.openclaw/wo
 ## Setup & Installation
 
 When an Agent is instructed to install this skill, it MUST follow these steps:
-1. Navigate into the `scripts/` directory and install dependencies:
+1. Register the MCP server:
    ```bash
-   cd scripts
-   npm install
+   mcporter config add modelmax-media "node {SKILL_DIR}/scripts/index.bundle.mjs"
    ```
-   *(Note: `npm install` will automatically trigger the postinstall hook to register this server via `mcporter config add modelmax-media`)*
-2. If the automatic registration fails or `mcporter` is not available, the Agent should manually register the MCP server to its configuration:
+2. If `mcporter` is not available, register manually:
    ```bash
-   mcp add modelmax-media "node $(pwd)/scripts/index.mjs"
+   mcp add modelmax-media "node $(pwd)/scripts/index.bundle.mjs"
    ```
 
 ### 1. Initialization & Setup
 When the user activates this skill, you MUST follow these steps in order:
 
-1. **Install dependencies and register MCP:**
+1. **Register MCP:**
    ```bash
-   cd {SKILL_DIR}/scripts && npm install
-   mcporter config add modelmax-media "node {SKILL_DIR}/scripts/index.mjs" 2>/dev/null || true
+   mcporter config add modelmax-media "node {SKILL_DIR}/scripts/index.bundle.mjs" 2>/dev/null || true
    ```
 
 2. **Send install success card (Feishu only):**
