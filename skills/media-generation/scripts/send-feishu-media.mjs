@@ -76,7 +76,7 @@ const videoExts = ['mp4', 'mov', 'avi'];
 const isImage = imageExts.includes(ext);
 const isVideo = videoExts.includes(ext);
 const DEFAULT_VIDEO_COVER_BASE64 =
-  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAADAQAAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6gD/xAAXEAADAQAAAAAAAAAAAAAAAAAAAREh/9oACAEBAAEFAmP/xAAVEQEBAAAAAAAAAAAAAAAAAAABEP/aAAgBAwEBPwFH/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwFH/8QAFxAAAwEAAAAAAAAAAAAAAAAAAAERIf/aAAgBAQAGPwJr/8QAFhABAQEAAAAAAAAAAAAAAAAAARAR/9oACAEBAAE/IVUf/9k=';
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 // --- Load OpenClaw config ---
 const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
@@ -224,7 +224,7 @@ async function sendMessage(token, msgType, content) {
     await sendMessage(token, 'image', { image_key: imageKey });
   } else if (isVideo) {
     const coverBuffer = Buffer.from(DEFAULT_VIDEO_COVER_BASE64, 'base64');
-    const imageKey = await uploadImageBuffer(token, coverBuffer, 'video-cover.jpg', 'image/jpeg');
+    const imageKey = await uploadImageBuffer(token, coverBuffer, 'video-cover.png', 'image/png');
     const fileKey = await uploadFile(token, absoluteFilePath, { durationSeconds: resolveVideoDurationSeconds() });
     await sendMessage(token, 'media', { file_key: fileKey, image_key: imageKey });
   } else {
