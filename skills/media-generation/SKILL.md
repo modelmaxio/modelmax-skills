@@ -4,6 +4,10 @@ description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) 
 version: "1.0.0"
 metadata:
   openclaw:
+    scriptsDir: "scripts"
+    tools:
+      card_sender: "scripts/send-feishu-card.mjs"
+      mcp_server: "scripts/index.bundle.mjs"
     primaryEnv: MODELMAX_API_KEY
     requires:
       env:
