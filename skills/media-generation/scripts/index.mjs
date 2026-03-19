@@ -38,6 +38,20 @@ async function loadCardTemplate(name) {
   return JSON.parse(raw);
 }
 
+async function isModelMaxAutoPayEnabled() {
+  if (process.env.MODELMAX_AUTO_PAY === "true") {
+    return true;
+  }
+  try {
+    const config = await loadOpenClawConfig();
+    const value = config?.skills?.entries?.["modelmax-media-generation"]?.env?.MODELMAX_AUTO_PAY;
+    return value === true || value === "true";
+  } catch (error) {
+    console.error(`[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
+  }
+}
+
 function normalizeFeishuTarget(args) {
   const chatId = typeof args.chat_id === "string" && args.chat_id.trim() ? args.chat_id.trim() : null;
   const openId = typeof args.open_id === "string" && args.open_id.trim() ? args.open_id.trim() : null;
@@ -122,7 +136,7 @@ async function fetchModelMax(url, options, toolName, args, disableAutoPayPersist
       // Ignore body parse failures and fall back to the default balance payload.
     }
 
-    if (toolName && process.env.MODELMAX_AUTO_PAY === "true" && !disableAutoPayPersistence) {
+    if (toolName && !disableAutoPayPersistence && await isModelMaxAutoPayEnabled()) {
       return {
         _isAutoPayTriggered: true,
         autoPayDirective: await buildAutoPayResponse(autoPayPayload, toolName, args),
