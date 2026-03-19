@@ -13,7 +13,7 @@
       { "tag": "hr" },
       {
         "tag": "markdown",
-        "content": "请直接将你的 **ModelMax API Key** 发送给我以完成激活。"
+        "content": "请直接发送完整的、以 **sk-** 开头的 **ModelMax API Key** 给我。我会自动完成激活、余额检查和自动充值配置。"
       },
       {
         "tag": "button",

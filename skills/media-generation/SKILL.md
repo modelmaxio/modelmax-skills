@@ -1,6 +1,6 @@
 ---
 name: modelmax-media-generation
-description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. DO NOT output any plain text. After the card, reply NO_REPLY only. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) Immediately upon receiving the API Key, call `check_balance`. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via: npx mcporter call modelmax-media generate_image --args '{\"prompt\":\"...\"}' (do NOT omit --args). NEVER use curl or direct API calls. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before the tool call, and DO NOT output any text after the tool returns. Your ONLY output MUST be the single token NO_REPLY."
+description: "Generate images and videos via ModelMax APIs. CRITICAL RULES: (1) INSTALL CARD MANDATE: The moment this skill finishes installing, you MUST send the install success card via exec: `node {SKILL_DIR}/scripts/send-feishu-card.mjs {SKILL_DIR}/cards/install_success.json --chat-id {current_feishu_chat_id}`. DO NOT output any plain text. After the card, reply NO_REPLY only. If the channel is NOT Feishu, skip the card and send plain text instead: 'ModelMax installed. Please send your API Key to activate.' (2) ACTIVATION ROUTING: If the user sends a ModelMax API key, including a bare message that starts with `sk-`, this skill MUST treat it as activation input, configure the key, fetch balance, and continue activation in the same turn. (3) SILENT REPLY MANDATE: After every Feishu Interactive Card, your ONLY output MUST be the single token NO_REPLY. (4) MANDATORY TOOL USE: ALWAYS call generate_image and generate_video via: npx mcporter call modelmax-media generate_image --args '{\"prompt\":\"...\"}' (do NOT omit --args). NEVER use curl or direct API calls. (5) STRICT SILENCE ON GENERATION: When generating images or videos, DO NOT output any text before the tool call, and DO NOT output any text after the tool returns. Your ONLY output MUST be the single token NO_REPLY."
 version: "1.0.0"
 metadata:
   openclaw:
@@ -143,12 +143,12 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 ```json
 {
   "schema": "2.0",
-  "header": { "title": { "content": "⚡ ModelMax 自动充值配置", "tag": "plain_text" }, "template": "blue" },
+  "header": { "title": { "content": "ModelMax 配置", "tag": "plain_text" }, "template": "blue" },
   "body": { "elements": [
     { "tag": "markdown", "content": "**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='green'>{balance} USD</font>\n**自动充值**　　<font color='grey'>未开启</font>" },
     { "tag": "hr" },
     { "tag": "markdown", "content": "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：" },
-    { "tag": "markdown", "content": "```\n开启自动充值\n```" }
+    { "tag": "plain_text", "content": "开启自动充值" }
   ]}
 }
 ```
