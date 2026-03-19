@@ -119,9 +119,10 @@ When the user activates this skill, you MUST follow these steps in order:
    npx mcporter call modelmax-media check_balance --args '{}'
    ```
    If `check_balance` returns an error, inform the user to re-check their API key.
+   `check_balance` now returns balance data only; during installation/activation, do NOT send a separate balance card.
 
 ### 2. Automatic Top-Up Configuration
-Immediately after `check_balance` succeeds, you MUST send a card to ask about Auto-Pay:
+Immediately after `check_balance` succeeds, you MUST send exactly ONE card to ask about Auto-Pay. This card must also include the current balance from `check_balance`:
 
 **Feishu channel — send dynamic card via exec:**
 ```bash
