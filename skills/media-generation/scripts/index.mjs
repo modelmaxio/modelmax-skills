@@ -686,6 +686,20 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
     };
   }
 
+  try {
+    const removed = await removePendingAutoPayTask(target, pendingTask.id, sessionId);
+    if (!removed) {
+      const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
+      const message = `[autopay] Pending task ${pendingTask.id} could not be removed before resume for ${targetKey} session=${sessionId || "N/A"}`;
+      console.error(message);
+      await appendErrorLog(message);
+    }
+  } catch (error) {
+    const message = `[autopay] Failed to remove pending task ${pendingTask.id} before resume: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(message);
+    await appendErrorLog(message);
+  }
+
   let result;
   if (pendingTask.toolName === "generate_image") {
     result = await handleGenerateImage(pendingTask.args, apiKey, { disableAutoPayPersistence: true });
@@ -705,20 +719,6 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
 
   if (resultText.startsWith("Error")) {
     return result;
-  }
-
-  try {
-    const removed = await removePendingAutoPayTask(target, pendingTask.id, sessionId);
-    if (!removed) {
-      const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
-      const message = `[autopay] Pending task ${pendingTask.id} completed but was not removed for ${targetKey} session=${sessionId || "N/A"}`;
-      console.error(message);
-      await appendErrorLog(message);
-    }
-  } catch (error) {
-    const message = `[autopay] Failed to remove resumed pending task ${pendingTask.id}: ${error instanceof Error ? error.message : String(error)}`;
-    console.error(message);
-    await appendErrorLog(message);
   }
 
   return result;
