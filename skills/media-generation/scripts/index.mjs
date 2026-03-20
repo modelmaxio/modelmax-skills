@@ -7,8 +7,9 @@ import os from "os";
 import { execFileSync } from "child_process";
 
 const BASE_URL = "https://api.modelmax.io";
-const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const CARD_SENDER = path.join(SKILL_DIR, "send-feishu-card.mjs");
+const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
+const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
+const CARD_SENDER = path.join(SCRIPT_DIR, "send-feishu-card.mjs");
 const STATE_DIR = path.join(os.homedir(), ".openclaw", "state", "modelmax-media");
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
 const ERROR_LOG_PATH = path.join(STATE_DIR, "error.log");
@@ -491,7 +492,7 @@ async function handleGenerateImage(args, apiKey, options = {}) {
   console.error(`[generate_image] Saved image to ${absolutePath}`);
 
   if (args.chat_id || args.open_id) {
-    const sendScript = path.join(path.dirname(new URL(import.meta.url).pathname), "send-feishu-media.mjs");
+    const sendScript = path.join(SCRIPT_DIR, "send-feishu-media.mjs");
     const targetFlag = args.open_id ? "--open-id" : "--chat-id";
     const targetValue = args.open_id ?? args.chat_id;
     execFileSync(
@@ -641,7 +642,7 @@ async function handleGenerateVideo(args, apiKey, options = {}) {
   console.error(`[generate_video] Saved video to ${absolutePath}`);
 
   if (args.chat_id || args.open_id) {
-    const sendScript = path.join(path.dirname(new URL(import.meta.url).pathname), "send-feishu-media.mjs");
+    const sendScript = path.join(SCRIPT_DIR, "send-feishu-media.mjs");
     const targetFlag = args.open_id ? "--open-id" : "--chat-id";
     const targetValue = args.open_id ?? args.chat_id;
     execFileSync(
