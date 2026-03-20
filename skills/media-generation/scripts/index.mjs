@@ -11,9 +11,19 @@ const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), 
 const CARD_SENDER = path.join(SKILL_DIR, "send-feishu-card.mjs");
 const STATE_DIR = path.join(os.homedir(), ".openclaw", "state", "modelmax-media");
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
+const ERROR_LOG_PATH = path.join(STATE_DIR, "error.log");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(os.homedir(), ".openclaw", "openclaw.json");
 // Persist pending auto-pay tasks so the recharge-confirmation flow still works
 // when ModelMax tools are invoked through short-lived mcporter subprocesses.
+
+async function appendErrorLog(message) {
+  try {
+    await fs.promises.mkdir(STATE_DIR, { recursive: true });
+    await fs.promises.appendFile(ERROR_LOG_PATH, `[${new Date().toISOString()}] ${message}\n`, "utf8");
+  } catch (error) {
+    console.error(`[autopay] Failed to write error log: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 async function loadOpenClawConfig() {
   try {
@@ -46,7 +56,9 @@ async function isModelMaxAutoPayEnabled() {
     const value = config?.skills?.entries?.["modelmax-media-generation"]?.env?.MODELMAX_AUTO_PAY;
     return value === true || value === "true";
   } catch (error) {
-    console.error(`[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`);
+    const message = `[autopay] Failed to read MODELMAX_AUTO_PAY from openclaw config: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(message);
+    await appendErrorLog(message);
     return false;
   }
 }
@@ -178,7 +190,9 @@ async function readPendingAutoPayStore() {
     if (error && error.code === "ENOENT") {
       return { tasks: {} };
     }
-    console.error(`[autopay] Failed to read pending task store: ${error instanceof Error ? error.message : String(error)}`);
+    const message = `[autopay] Failed to read pending task store: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(message);
+    await appendErrorLog(message);
     return { tasks: {} };
   }
 }
@@ -652,7 +666,9 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
   const pendingTask = await getPendingAutoPayTask(target, sessionId);
   if (!pendingTask) {
     const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
-    console.error(`[autopay] No pending task found for ${targetKey} while confirming order ${orderId} session=${sessionId || "N/A"}`);
+    const message = `[autopay] No pending task found for ${targetKey} while confirming order ${orderId} session=${sessionId || "N/A"}`;
+    console.error(message);
+    await appendErrorLog(message);
     return {
       content: [{
         type: "text",
@@ -692,9 +708,17 @@ async function resumePendingAutoPayTask(apiKey, orderId, target, sessionId = nul
   }
 
   try {
-    await removePendingAutoPayTask(target, pendingTask.id, sessionId);
+    const removed = await removePendingAutoPayTask(target, pendingTask.id, sessionId);
+    if (!removed) {
+      const targetKey = target.openId ? `open_id:${target.openId}` : target.chatId ? `chat_id:${target.chatId}` : "global";
+      const message = `[autopay] Pending task ${pendingTask.id} completed but was not removed for ${targetKey} session=${sessionId || "N/A"}`;
+      console.error(message);
+      await appendErrorLog(message);
+    }
   } catch (error) {
-    console.error(`[autopay] Failed to remove resumed pending task ${pendingTask.id}: ${error instanceof Error ? error.message : String(error)}`);
+    const message = `[autopay] Failed to remove resumed pending task ${pendingTask.id}: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(message);
+    await appendErrorLog(message);
   }
 
   return result;
