@@ -49,9 +49,6 @@ async function loadCardTemplate(name) {
 }
 
 async function isModelMaxAutoPayEnabled() {
-  if (process.env.MODELMAX_AUTO_PAY === "true") {
-    return true;
-  }
   try {
     const config = await loadOpenClawConfig();
     const value = config?.skills?.entries?.["modelmax-media-generation"]?.env?.MODELMAX_AUTO_PAY;
@@ -857,6 +854,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (data && data.balance !== undefined) {
         const balance = Number(data.balance).toFixed(2);
         const low = Number(balance) < 5;
+        const autoPayEnabled = await isModelMaxAutoPayEnabled();
         const sendCard = args.send_card !== false;
 
         if (!sendCard) {
@@ -867,20 +865,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 balance_usd: balance,
                 currency: "USD",
                 low_balance: low,
+                auto_pay_enabled: autoPayEnabled,
               }),
             }],
           };
         }
 
         const balanceColor = low ? "red" : "green";
+        const autoPayStatusColor = autoPayEnabled ? "green" : "grey";
+        const autoPayStatusText = autoPayEnabled ? "已开启 ✓" : "未开启";
+        const description = autoPayEnabled
+          ? "自动充值已激活。当余额不足时，系统将自动通过 Clink 钱包进行续费，确保生成任务不中断。"
+          : "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：";
         const cardJson = JSON.stringify({
           schema: "2.0",
           header: { title: { content: "ModelMax 配置", tag: "plain_text" }, template: "blue" },
           body: { elements: [
-            { tag: "markdown", content: `**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='${balanceColor}'>$${balance} USD</font>\n**自动充值**　　<font color='grey'>未开启</font>` },
+            { tag: "markdown", content: `**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='${balanceColor}'>$${balance} USD</font>\n**自动充值**　　<font color='${autoPayStatusColor}'>${autoPayStatusText}</font>` },
             { tag: "hr" },
-            { tag: "markdown", content: "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：" },
-            { tag: "markdown", content: "开启自动充值" }
+            { tag: "markdown", content: description },
+            ...(autoPayEnabled ? [] : [{ tag: "markdown", content: "开启自动充值" }])
           ]}
         });
 

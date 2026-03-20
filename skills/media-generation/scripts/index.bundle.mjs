@@ -21568,6 +21568,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (data && data.balance !== void 0) {
         const balance = Number(data.balance).toFixed(2);
         const low = Number(balance) < 5;
+        const autoPayEnabled = await isModelMaxAutoPayEnabled();
         const sendCard = args.send_card !== false;
         if (!sendCard) {
           return {
@@ -21576,22 +21577,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify({
                 balance_usd: balance,
                 currency: "USD",
-                low_balance: low
+                low_balance: low,
+                auto_pay_enabled: autoPayEnabled
               })
             }]
           };
         }
         const balanceColor = low ? "red" : "green";
+        const autoPayStatusColor = autoPayEnabled ? "green" : "grey";
+        const autoPayStatusText = autoPayEnabled ? "\u5DF2\u5F00\u542F \u2713" : "\u672A\u5F00\u542F";
+        const description = autoPayEnabled ? "\u81EA\u52A8\u5145\u503C\u5DF2\u6FC0\u6D3B\u3002\u5F53\u4F59\u989D\u4E0D\u8DB3\u65F6\uFF0C\u7CFB\u7EDF\u5C06\u81EA\u52A8\u901A\u8FC7 Clink \u94B1\u5305\u8FDB\u884C\u7EED\u8D39\uFF0C\u786E\u4FDD\u751F\u6210\u4EFB\u52A1\u4E0D\u4E2D\u65AD\u3002" : "\u5F53\u4F59\u989D\u4E0D\u8DB3\u65F6\uFF0C\u81EA\u52A8\u5145\u503C\u53EF\u65E0\u611F\u7EED\u8D39\uFF0C\u907F\u514D\u56FE\u7247/\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u4E2D\u65AD\u3002\u9ED8\u8BA4\u4E0D\u5F00\u542F\u3002\u5982\u9700\u5F00\u542F\uFF0C\u8BF7\u5728\u8F93\u5165\u6846\u56DE\u590D\u300C\u5F00\u542F\u81EA\u52A8\u5145\u503C\u300D\uFF1A";
         const cardJson = JSON.stringify({
           schema: "2.0",
           header: { title: { content: "ModelMax \u914D\u7F6E", tag: "plain_text" }, template: "blue" },
           body: { elements: [
             { tag: "markdown", content: `**API Key \u72B6\u6001**\u3000<font color='green'>\u5DF2\u9A8C\u8BC1 \u2713</font>
 **\u5F53\u524D\u4F59\u989D**\u3000\u3000<font color='${balanceColor}'>$${balance} USD</font>
-**\u81EA\u52A8\u5145\u503C**\u3000\u3000<font color='grey'>\u672A\u5F00\u542F</font>` },
+**\u81EA\u52A8\u5145\u503C**\u3000\u3000<font color='${autoPayStatusColor}'>${autoPayStatusText}</font>` },
             { tag: "hr" },
-            { tag: "markdown", content: "\u5F53\u4F59\u989D\u4E0D\u8DB3\u65F6\uFF0C\u81EA\u52A8\u5145\u503C\u53EF\u65E0\u611F\u7EED\u8D39\uFF0C\u907F\u514D\u56FE\u7247/\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u4E2D\u65AD\u3002\u9ED8\u8BA4\u4E0D\u5F00\u542F\u3002\u5982\u9700\u5F00\u542F\uFF0C\u8BF7\u5728\u8F93\u5165\u6846\u56DE\u590D\u300C\u5F00\u542F\u81EA\u52A8\u5145\u503C\u300D\uFF1A" },
-            { tag: "markdown", content: "\u5F00\u542F\u81EA\u52A8\u5145\u503C" }
+            { tag: "markdown", content: description },
+            ...autoPayEnabled ? [] : [{ tag: "markdown", content: "\u5F00\u542F\u81EA\u52A8\u5145\u503C" }]
           ] }
         });
         return { content: [{ type: "text", text: `Balance: $${balance} USD

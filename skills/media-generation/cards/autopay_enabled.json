@@ -8,12 +8,12 @@
     "elements": [
       {
         "tag": "markdown",
-        "content": "<font color='green'>**自动充值**</font>　　已开启 ✓\n<font color='green'>**支付渠道**</font>　　Clink Payment Skill"
+        "content": "**自动充值**　　<font color='green'>已开启 ✓</font>\n**支付渠道**　　<font color='green'>Clink 钱包</font>"
       },
       { "tag": "hr" },
       {
         "tag": "markdown",
-        "content": "余额不足时将自动触发充值，无需手动干预。"
+        "content": "自动充值已激活。当余额不足时，系统将自动通过 Clink 钱包进行续费，确保生成任务不中断。"
       }
     ]
   }
