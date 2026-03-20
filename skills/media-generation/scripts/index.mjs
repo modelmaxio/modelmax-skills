@@ -350,7 +350,7 @@ async function handleUninstallSkill(args = {}) {
   let cardError = null;
 
   try {
-    execFileSync("mcporter", ["config", "remove", "modelmax-media"], {
+    execFileSync("npx", ["mcporter", "config", "remove", "modelmax-media"], {
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15000,
