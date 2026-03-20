@@ -55,7 +55,7 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 2. Invoke \`agent-payment-skills.clink_pay\` with the sessionId.
    If you must call via shell, use this EXACT command (do NOT omit --args):
    \`\`\`
-   npx mcporter call agent-payment-skills clink_pay --args '{"sessionId":"${r}"}'
+   npx mcporter call agent-payment-skills clink_pay --args '{"sessionId":"${r}","merchant_confirm_server":"modelmax-media","merchant_confirm_tool":"check_recharge_status","merchant_confirm_args":{}}'
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
@@ -68,7 +68,7 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 3. Invoke \`agent-payment-skills.clink_pay\` using the merchant_id and default_amount returned by \`get_payment_config\`. Do NOT ask the user for an amount.
    If you must call via shell, use this EXACT command (do NOT omit --args, replace placeholders):
    \`\`\`
-   npx mcporter call agent-payment-skills clink_pay --args '{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD"}'
+   npx mcporter call agent-payment-skills clink_pay --args '{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD","merchant_confirm_server":"modelmax-media","merchant_confirm_tool":"check_recharge_status","merchant_confirm_args":{}}'
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
