@@ -35,6 +35,64 @@ Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
 
 After sending a Feishu Interactive Card or media item, you may continue with a short natural-language reply when the surrounding workflow needs it. Do not force `NO_REPLY` unless a specific tool result explicitly requires it.
 
+## Card Ownership Matrix (Hard Rule)
+
+Exactly one layer owns each semantic card. Do NOT duplicate card delivery.
+
+| Event | Owner | Required behavior |
+|---|---|---|
+| Install complete | agent | Send exactly one install success card |
+| API key activation summary | agent | Send exactly one configuration/auto-pay prompt card |
+| Balance check with `send_card:false` | tool | Returns data only; agent must decide the next card |
+| Payment-layer `✅ 支付成功` | payment skill | ModelMax skill MUST NOT send another payment-success card |
+| `check_recharge_status` credited/paid | modelmax tool | Tool owns `✅ 充值成功` and pending-task resume |
+| `check_recharge_status` failed/refunded | modelmax tool | Tool owns `❌ 充值失败` |
+| Generated image/video delivery | modelmax tool + `send-feishu-media.mjs` | Agent must execute exactly one media send |
+
+## Merchant Result Ownership (Hard Rule)
+
+For ModelMax, `check_recharge_status` is the only owner of merchant-layer recharge result cards.
+
+- No other layer may send `✅ 充值成功` for the same `order_id`.
+- No other layer may send `❌ 充值失败` for the same `order_id`.
+- Payment-layer `✅ 支付成功` belongs to the payment skill, not ModelMax.
+
+## Tool Return Contract (Hard Rule)
+
+- `DIRECT_SEND`
+  - Meaning: the tool already sent the card/media
+  - Agent MUST NOT send a duplicate semantic-equivalent card/media
+- `EXEC_REQUIRED`
+  - Meaning: the tool returned an explicit exec command
+  - Agent MUST execute it exactly once
+- `DATA_ONLY`
+  - Meaning: the tool returned data only
+  - Agent may send the next required card defined by this skill
+- `NO_REPLY`
+  - Meaning: preserve exactly; do not append text, cards, or retries
+
+## Prohibited Behaviors (Hard Rule)
+
+- Do NOT send `✅ 充值成功` before `check_recharge_status` confirms `credited=true` or `status=paid`.
+- Do NOT send a second `✅ 充值成功` or `❌ 充值失败` card for the same `order_id`.
+- Do NOT send a payment-layer `✅ 支付成功` card from ModelMax; that belongs to the payment skill.
+- Do NOT infer recovery state from chat memory when `pending-auto-pay-task.json` or tool output is available.
+- Do NOT paraphrase the full card contents after the card is already sent.
+
+## Amount Selection Rule (Hard Rule)
+
+There are only two valid amount sources for ModelMax recharge:
+
+1. User override
+   - If the user explicitly provides a concrete recharge amount in the current turn, you MUST use that amount.
+   - This user-specified amount overrides the merchant default.
+
+2. Merchant default
+   - If the user does not explicitly provide a concrete recharge amount in the current turn, you MUST call `get_payment_config` and use the returned `default_amount` exactly as-is.
+
+You MUST NOT invent a third amount from memory, prior turns, habit, or judgment.
+You MUST NOT replace the merchant default with `1`, `5`, or any other arbitrary amount unless the user explicitly asked for that amount in the current turn.
+
 ## Sending Feishu Cards
 
 This skill includes a standalone card-sending script that requires no external dependencies:
@@ -73,7 +131,7 @@ Replace `{SKILL_DIR}` with the actual skill directory path (e.g. `~/.openclaw/wo
 
 - `generate_image`: Generates an image using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns a SYSTEM DIRECTIVE, run `send-feishu-media.mjs` via exec to deliver the image inline.
 - `generate_video`: Generates a video using ModelMax. Saves to `~/.openclaw/tmp/`. After it returns a SYSTEM DIRECTIVE, run `send-feishu-media.mjs` via exec to deliver the video.
-- `get_merchant_id`: Retrieves the ModelMax merchant ID.
+- `get_payment_config`: Retrieves the ModelMax payment config: `merchant_id`, `default_amount`, and `currency`.
 - `check_balance`: Checks your current ModelMax API balance.
 
 ## Setup & Installation
@@ -115,7 +173,7 @@ When the user activates this skill, you MUST follow these steps in order:
      ```bash
      npx mcporter call modelmax-media check_balance --args '{"send_card":false}'
      ```
-   - Then immediately send the auto-pay configuration card using the returned balance.
+   - Then immediately send exactly one auto-pay configuration card using the returned balance.
    - After sending that card, you may continue with a short natural-language reply.
 5. **Verify API Key:** Once the API Key is configured (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
@@ -149,6 +207,12 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 
 `check_balance` supports a `send_card` parameter. During activation, you MUST call it with `{"send_card":false}` so it only returns balance data and does not end the turn early. For normal user-facing balance checks, omit the parameter and let it send the standard balance card.
 
+Important:
+- `send_card:false` means `DATA_ONLY`
+- When `send_card:false`, `check_balance` MUST NOT send any balance card
+- In that mode, the agent owns the next configuration card
+- In normal balance-check mode, if the tool direct-sends the balance card, the agent MUST NOT send a second balance card
+
 **Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "开启自动充值".
 
 **If user replies "开启自动充值":**
@@ -179,10 +243,21 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
    - After sending this card, you may continue with a short natural-language reply.
 
 **During later 402 auto-pay recovery:**
-- If a later Clink webhook wake says payment/order.succeeded and provides an `order_id`, you MUST treat that as the merchant handoff signal for the pending ModelMax recharge flow.
-- If that wake also includes a `session_id`, you MUST pass it through to `check_recharge_status` so the current pending ModelMax recharge task in that chat can be matched more safely.
-- Even if the payment webhook does not explicitly mention `check_recharge_status`, you MUST immediately call `check_recharge_status` with that `order_id` and optional `session_id`, wait for merchant到账 confirmation, and only then resume the original image/video task.
+- `payment handoff` means the payment layer has confirmed successful payment and provided `order_id` and optional `session_id` for merchant到账确认.
+- If a later payment handoff provides an `order_id`, you MUST treat that as the handoff signal for the pending ModelMax recharge flow.
+- If that handoff also includes a `session_id`, you MUST pass it through to `check_recharge_status` so the current pending ModelMax recharge task in that chat can be matched more safely.
+
+### 402 Recovery Contract (Hard Rule)
+
+After payment handoff:
+1. Call `check_recharge_status` exactly once.
+2. If `check_recharge_status` direct-sent `✅ 充值成功`, do NOT send another recharge-success card.
+3. If `check_recharge_status` direct-sent `❌ 充值失败`, do NOT send another failure card.
+4. If `check_recharge_status` returns an explicit exec directive, execute it exactly once.
+5. Resume the pending image/video task only after recharge confirmation succeeds.
+
 - Current implementation persists pending auto-pay tasks under `~/.openclaw/state/modelmax-media/pending-auto-pay-task.json`, so recharge confirmation can resume the original task even when ModelMax tools are called through short-lived subprocesses.
+- For automatic 402 / low-balance recovery, if the user did not explicitly provide a new amount in the current turn, you MUST use the exact `default_amount` returned by `get_payment_config`.
 
 **If user does not reply "开启自动充值" (any other reply, or no reply, or silence):**
 Do nothing — auto-pay remains disabled. Do NOT send any card. Move on.
