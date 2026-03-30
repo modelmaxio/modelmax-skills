@@ -158,7 +158,7 @@ When the user activates this skill, you MUST follow these steps in order:
    - Other channels should receive the equivalent text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
    - After sending the notification, you may continue with a short natural-language reply.
 
-3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://uat-www.modelmax.io/dashboard/keys) if they don't have one.
+3. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
 4. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
    - First run:
      ```bash
