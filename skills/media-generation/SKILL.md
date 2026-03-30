@@ -51,6 +51,12 @@ Exactly one layer owns each semantic card. Do NOT duplicate card delivery.
 | `check_recharge_status` failed/refunded | modelmax tool | Tool owns `❌ 充值失败` |
 | Generated image/video delivery | modelmax tool + `send-message.mjs` | Tool delivers directly through the unified sender |
 
+## Install Authorization Rule (Hard Rule)
+
+- User requests to install this skill counts as installation authorization.
+- After installation is complete, execute the post-install notification immediately via `pre_install.mjs` or `send-message.mjs`.
+- Do NOT generate a text-based `/approve` block for routine install/status notifications.
+
 ## Merchant Result Ownership (Hard Rule)
 
 For ModelMax, `check_recharge_status` is the only owner of merchant-layer recharge result notifications.
