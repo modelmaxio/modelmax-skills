@@ -150,9 +150,11 @@ Do not duplicate installation steps in this file. When the user asks to install 
 ### 1. Initialization & Setup
 When the user activates this skill, you MUST follow these steps in order:
 
-1. **Send install success notification after the documented install flow succeeds:**
+1. **Send install success notification immediately after the documented install flow succeeds:**
+   - For OpenClaw-managed installs, prefer `scripts/pre_install.mjs`; it registers the MCP server and sends the install success notification directly.
    - Feishu may use `send-message.mjs` with the `install_success.json` card payload.
    - Other channels should receive the equivalent text: "✅ ModelMax Skills installed. Please send your ModelMax API Key to activate."
+   - Do not delay the install notification waiting for any later restart/status callback.
    - After sending the notification, you may continue with a short natural-language reply.
 
 2. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.

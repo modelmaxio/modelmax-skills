@@ -64,12 +64,20 @@ mkdir -p "$(dirname "$TARGET_DIR")"
 rm -rf "$TARGET_DIR"
 cp -R skills/media-generation "$TARGET_DIR"
 
-cd "$TARGET_DIR/scripts"
-npm install
-npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
+cd "$TARGET_DIR"
+node scripts/pre_install.mjs --channel <CHANNEL> --target-id <TARGET_ID> --target-type <TARGET_TYPE>
 ```
 
 不要把整个仓库直接 clone 到 `~/.openclaw/workspace/`。对于 OpenClaw，只应把 `skills/media-generation` 复制到 `~/.openclaw/workspace/skills/modelmax-media`。
+
+如果是飞书，请使用以下其中一种：
+
+```bash
+node scripts/pre_install.mjs --channel feishu --target-id <CHAT_ID> --target-type chat_id
+node scripts/pre_install.mjs --channel feishu --target-id <OPEN_ID> --target-type open_id
+```
+
+`pre_install.mjs` 会立即完成 MCP 注册并发送安装成功通知，不会等待后续的重启成功卡片。
 
 ---
 

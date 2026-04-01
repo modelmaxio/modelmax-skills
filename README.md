@@ -64,12 +64,20 @@ mkdir -p "$(dirname "$TARGET_DIR")"
 rm -rf "$TARGET_DIR"
 cp -R skills/media-generation "$TARGET_DIR"
 
-cd "$TARGET_DIR/scripts"
-npm install
-npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
+cd "$TARGET_DIR"
+node scripts/pre_install.mjs --channel <CHANNEL> --target-id <TARGET_ID> --target-type <TARGET_TYPE>
 ```
 
 Do not clone this repo directly into `~/.openclaw/workspace/`. For OpenClaw, only copy `skills/media-generation` into `~/.openclaw/workspace/skills/modelmax-media`.
+
+For Feishu, use one of:
+
+```bash
+node scripts/pre_install.mjs --channel feishu --target-id <CHAT_ID> --target-type chat_id
+node scripts/pre_install.mjs --channel feishu --target-id <OPEN_ID> --target-type open_id
+```
+
+`pre_install.mjs` registers the MCP server and sends the install success notification immediately. It does not wait for any later restart-success card.
 
 ---
 
