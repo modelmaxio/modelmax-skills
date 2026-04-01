@@ -55,6 +55,45 @@ async function loadOpenClawConfig() {
   }
 }
 
+async function loadMcporterConfig() {
+  try {
+    const raw = await fs.promises.readFile(MCPORTER_CONFIG_PATH, "utf8");
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return {};
+    }
+    throw error;
+  }
+}
+
+function getMcporterServerMap(config) {
+  if (config?.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers)) {
+    return config.mcpServers;
+  }
+  if (config?.servers && typeof config.servers === "object" && !Array.isArray(config.servers)) {
+    return config.servers;
+  }
+  return {};
+}
+
+async function resolveMerchantServerName() {
+  try {
+    const config = await loadMcporterConfig();
+    const serverMap = getMcporterServerMap(config);
+    for (const candidate of [MCP_SERVER_NAME, ...LEGACY_SKILL_ENTRY_NAMES]) {
+      if (serverMap[candidate]) {
+        return candidate;
+      }
+    }
+  } catch (error) {
+    const message = `[autopay] Failed to resolve registered MCP server name: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(message);
+    await appendErrorLog(message);
+  }
+  return MCP_SERVER_NAME;
+}
+
 async function saveOpenClawConfig(config) {
   await fs.promises.mkdir(path.dirname(OPENCLAW_CONFIG_PATH), { recursive: true });
   await fs.promises.writeFile(OPENCLAW_CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
@@ -379,8 +418,9 @@ function isInsufficientBalanceResult(text) {
 }
 
 // Helper: build auto-pay directive based on 402 response
-function buildAutoPayDirective(data, retryTool) {
+async function buildAutoPayDirective(data, retryTool) {
   const sessionId = data?.session_id || data?.sessionId || null;
+  const merchantServerName = await resolveMerchantServerName();
 
   if (sessionId) {
     // Session mode: session already has amount/currency/merchant validated
@@ -392,7 +432,7 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 2. Invoke \`agent-payment-skills.clink_pay\` with the sessionId and the ModelMax merchant_integration payload.
    If you must call via shell, use this EXACT command shape (do NOT omit --args):
    \`\`\`
-   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"sessionId":"${sessionId}","merchant_integration":{"server":"${MCP_SERVER_NAME}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
+   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"sessionId":"${sessionId}","merchant_integration":{"server":"${merchantServerName}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
@@ -408,8 +448,8 @@ The following tools come from the \`agent-payment-skills\` skill. You MUST immed
 3. Invoke \`agent-payment-skills.clink_pay\` with the merchant_id, default_amount, currency, and the ModelMax merchant_integration payload. Do NOT ask the user for an amount.
    If you must call via shell, use this EXACT command shape (do NOT omit --args):
    \`\`\`
-   ${buildMcporterCallCommand(MCP_SERVER_NAME, "get_payment_config", "{}")}
-   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD","merchant_integration":{"server":"${MCP_SERVER_NAME}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
+   ${buildMcporterCallCommand(merchantServerName, "get_payment_config", "{}")}
+   ${buildMcporterCallCommand("agent-payment-skills", "clink_pay", `{"merchant_id":"<MERCHANT_ID>","amount":<AMOUNT>,"currency":"USD","merchant_integration":{"server":"${merchantServerName}","confirm_tool":"check_recharge_status","confirm_args":{}}}`)}
    \`\`\`
 
 After clink_pay succeeds, a later Clink webhook wake may only say that payment/order.succeeded was received and include order_id/session_id; it may NOT name the merchant tool explicitly.
@@ -424,7 +464,7 @@ async function buildAutoPayResponse(data, retryTool, args) {
     sessionId: data?.session_id || data?.sessionId || null,
     status: "awaiting_payment",
   });
-  return { content: [{ type: "text", text: buildAutoPayDirective(data, retryTool) }] };
+  return { content: [{ type: "text", text: await buildAutoPayDirective(data, retryTool) }] };
 }
 
 async function handleUninstallSkill(args = {}) {
