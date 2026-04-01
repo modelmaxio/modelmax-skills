@@ -53,6 +53,24 @@ npm install
 npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
 
+### For OpenClaw
+
+Install the skill into OpenClaw's managed skills directory instead of cloning the whole repo into `~/.openclaw/workspace`:
+
+```bash
+TARGET_DIR="${OPENCLAW_HOME:-$HOME}/.openclaw/workspace/skills/modelmax-media"
+
+mkdir -p "$(dirname "$TARGET_DIR")"
+rm -rf "$TARGET_DIR"
+cp -R skills/media-generation "$TARGET_DIR"
+
+cd "$TARGET_DIR/scripts"
+npm install
+npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
+```
+
+Do not clone this repo directly into `~/.openclaw/workspace/`. For OpenClaw, only copy `skills/media-generation` into `~/.openclaw/workspace/skills/modelmax-media`.
+
 ---
 
 ## Activate
