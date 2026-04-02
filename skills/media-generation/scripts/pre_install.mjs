@@ -20,7 +20,7 @@ const MCPORTER_CONFIG_PATH = path.join(OPENCLAW_DIR, 'config', 'mcporter.json');
 const BUNDLE = path.join(SKILL_DIR, 'scripts', 'index.bundle.mjs');
 const MESSAGE_SENDER = path.join(SKILL_DIR, 'scripts', 'send-message.mjs');
 const INSTALL_CARD_PATH = path.join(SKILL_DIR, 'cards', 'install_success.json');
-const LOG_PATH = path.join(OPENCLAW_DIR, 'state', 'modelmax-media', 'error.log');
+const LOG_PATH = path.join(SKILL_DIR, 'error.log');
 
 function parseNotifyDestination(argv) {
   let channel = '';

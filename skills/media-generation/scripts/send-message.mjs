@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
+const SKILL_DIR = path.resolve(SCRIPT_DIR, '..');
 const FEISHU_CARD_SENDER = path.join(SCRIPT_DIR, 'send-feishu-card.mjs');
 const FEISHU_MEDIA_SENDER = path.join(SCRIPT_DIR, 'send-feishu-media.mjs');
 const OPENCLAW_HOME = (() => {
@@ -12,7 +13,7 @@ const OPENCLAW_HOME = (() => {
   if (explicitHome && explicitHome !== 'undefined') return explicitHome;
   return os.homedir();
 })();
-const LOG_PATH = path.join(OPENCLAW_HOME, '.openclaw', 'state', 'modelmax-media', 'error.log');
+const LOG_PATH = path.join(SKILL_DIR, 'error.log');
 
 function logScriptError(context, error) {
   const parts = [

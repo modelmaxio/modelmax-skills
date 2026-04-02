@@ -28,7 +28,7 @@ const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const MESSAGE_SENDER = path.join(SCRIPT_DIR, "send-message.mjs");
 const STATE_DIR = path.join(OPENCLAW_DIR, "state", MCP_SERVER_NAME);
 const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.json");
-const ERROR_LOG_PATH = path.join(STATE_DIR, "error.log");
+const ERROR_LOG_PATH = path.join(SKILL_DIR, "error.log");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(OPENCLAW_DIR, "openclaw.json");
 const MCPORTER_CONFIG_PATH = path.join(OPENCLAW_DIR, "config", "mcporter.json");
 // Persist pending auto-pay tasks so the recharge-confirmation flow still works
@@ -36,7 +36,7 @@ const MCPORTER_CONFIG_PATH = path.join(OPENCLAW_DIR, "config", "mcporter.json");
 
 async function appendErrorLog(message) {
   try {
-    await fs.promises.mkdir(STATE_DIR, { recursive: true });
+    await fs.promises.mkdir(path.dirname(ERROR_LOG_PATH), { recursive: true });
     await fs.promises.appendFile(ERROR_LOG_PATH, `[${new Date().toISOString()}] ${message}\n`, "utf8");
   } catch (error) {
     console.error(`[autopay] Failed to write error log: ${error instanceof Error ? error.message : String(error)}`);
