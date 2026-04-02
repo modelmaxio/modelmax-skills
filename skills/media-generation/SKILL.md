@@ -43,8 +43,8 @@ Exactly one layer owns each semantic card. Do NOT duplicate card delivery.
 
 | Event | Owner | Required behavior |
 |---|---|---|
-| Install complete | agent | Send exactly one install success notification |
-| API key activation summary | agent | Send exactly one configuration/auto-pay prompt notification |
+| Install complete | pre_install.mjs | Registers MCP and sends exactly one install success notification |
+| API key activation summary | modelmax tool | `activate_api_key` owns the single configuration/auto-pay prompt notification |
 | Balance check with `send_card:false` | tool | Returns data only; agent must decide the next notification |
 | Payment-layer `✅ 支付成功` | payment skill | ModelMax skill MUST NOT send another payment-success notification |
 | `check_recharge_status` credited/paid | modelmax tool | Tool owns `✅ 充值成功` and pending-task resume |
@@ -131,6 +131,7 @@ node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"telegram","targ
 
 ## Features
 
+- `activate_api_key`: Saves the pasted ModelMax API key, verifies it immediately, and sends the activation summary notification directly when the notify target is provided.
 - `generate_image`: Generates an image using ModelMax and delivers it directly through `send-message.mjs`.
 - `generate_video`: Generates a video using ModelMax and delivers it directly through `send-message.mjs`.
 - `get_payment_config`: Retrieves the ModelMax payment config: `merchant_id`, `default_amount`, and `currency`.
@@ -156,16 +157,12 @@ When the user activates this skill, you MUST follow these steps in order:
 
 2. **Request API Key:** Wait for the user to provide their ModelMax API Key. Guide them to [ModelMax](https://www.modelmax.io/dashboard/keys) if they don't have one.
 3. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
-   - First run:
+   - First run `activate_api_key` and pass the current notify target so the tool can send the activation summary directly:
      ```bash
-     node {SKILL_DIR}/scripts/set-api-key.mjs <PASTED_KEY>
+     npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> activate_api_key --args '{"api_key":"<PASTED_KEY>","channel":"<CHANNEL>","target_id":"<TARGET_ID>","target_type":"<TARGET_TYPE>"}'
      ```
-   - Immediately after the config command succeeds, call `check_balance` with `send_card: false` (do NOT omit --args):
-     ```bash
-     npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> check_balance --args '{"send_card":false}'
-     ```
-   - Then immediately send exactly one auto-pay configuration notification using the returned balance.
-   - After sending that notification, you may continue with a short natural-language reply.
+   - If the tool returns `DIRECT_SEND`, do NOT send another activation/configuration notification.
+   - After the tool succeeds, you may continue with a short natural-language reply.
 4. **Verify API Key:** Once the API Key is configured in the local skill config file (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
    npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> check_balance --args '{"send_card":false}'
@@ -173,7 +170,7 @@ When the user activates this skill, you MUST follow these steps in order:
    If `check_balance` returns an error, inform the user to re-check their API key.
 
 ### 2. Automatic Top-Up Configuration
-Immediately after `check_balance` succeeds with `send_card: false`, you MUST send a notification to ask about Auto-Pay:
+If you are in the pasted-key activation path, `activate_api_key` already owns and sends the activation summary notification. Use the rules below only when you are verifying an already-configured key via `check_balance` with `send_card:false`.
 
 **Feishu channel — you may send a structured card notification:**
 ```bash
