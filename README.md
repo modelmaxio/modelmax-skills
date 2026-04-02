@@ -49,9 +49,10 @@ After installation, the agent will guide you through activation.
 git clone https://github.com/modelmaxio/skills.git
 cd skills
 cd skills/media-generation/scripts
-npm install
 npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
+
+`index.bundle.mjs` is already bundled in the repo, so `npm install` is not required for installation.
 
 ### Installation for OpenClaw
 

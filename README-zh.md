@@ -49,9 +49,10 @@ ModelMax Skills 可以为 OpenClaw Agent 增加图片生成、视频生成、余
 git clone https://github.com/modelmaxio/skills.git
 cd skills
 cd skills/media-generation/scripts
-npm install
 npx mcporter --config "${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json" config add modelmax-media "node $(pwd)/index.bundle.mjs"
 ```
+
+仓库里已经带了打包产物 `index.bundle.mjs`，安装时不需要再执行 `npm install`。
 
 ### Installation for OpenClaw
 
