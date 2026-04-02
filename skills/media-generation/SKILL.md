@@ -261,8 +261,7 @@ uninstall_skill
 
 Tool behavior:
 - Removes the MCP registration for `modelmax-media`
-- Removes `skills.entries.modelmax-media` from `openclaw.json` if present as legacy config
-- Removes legacy `skills.entries.modelmax-media-generation` from `openclaw.json`
+- Clears legacy skill config entries if present
 - Clears local pending ModelMax state
 - Deletes the local API key file stored at `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json` by deleting the skill directory last
 - Sends the uninstall confirmation notification directly when a notify target is provided
