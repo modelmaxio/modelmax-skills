@@ -144,6 +144,7 @@ export MODELMAX_API_KEY="sk-xxxx"
 ### 自动充值
 
 - `开启自动充值`
+- 也支持你当前语言里的等价表达
 
 ---
 

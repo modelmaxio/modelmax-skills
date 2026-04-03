@@ -144,6 +144,7 @@ Amount rules:
 ### Auto Top-Up
 
 - `Enable auto top-up`
+- Equivalent wording in your language also works
 
 ---
 

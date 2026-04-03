@@ -177,6 +177,15 @@ When the user activates this skill, you MUST follow these steps in order:
 ### 2. Automatic Top-Up Configuration
 If you are in the pasted-key activation path, `activate_api_key` already owns and sends the activation summary notification. Use the rules below only when you are verifying an already-configured key via `check_balance` with `send_card:false`.
 
+#### Routing Boundary Rule (Hard Rule)
+
+Route generic auto-top-up language by active merchant context, not by keyword alone.
+
+- While the user is in ModelMax activation, balance configuration, or 402 recovery flow, generic phrases such as "Enable auto top-up", "开启自动充值", or equivalent wording in the user's language belong to ModelMax first.
+- Do NOT hand off the user's request to `agent-payment-skills` just because the phrase mentions auto top-up.
+- Call or install `agent-payment-skills` only as a dependency for wallet/payment setup, then resume the ModelMax flow immediately after that dependency work completes.
+- If the user explicitly asks for Clink setup, payment wallet setup, card binding, or payment-method management as the primary intent, that infrastructure request may belong to `agent-payment-skills` instead of ModelMax.
+
 **Feishu channel — you may send a structured card notification:**
 ```bash
 node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"feishu","target":{"type":"chat_id","id":"<TARGET_ID>"},"card":<CARD_JSON>}'
@@ -190,13 +199,13 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
   "body": { "elements": [
     { "tag": "markdown", "content": "**API Key Status**  <font color='green'>Verified ✓</font>\n**Current Balance**  <font color='green'>{balance} USD</font>\n**Auto Top-Up**  <font color='grey'>Disabled</font>" },
     { "tag": "hr" },
-    { "tag": "markdown", "content": "When your balance runs low, auto top-up keeps image and video generation from being interrupted. It is disabled by default. To enable it, reply with 'Enable auto top-up':" },
+    { "tag": "markdown", "content": "When your balance runs low, auto top-up keeps image and video generation from being interrupted. It is disabled by default. To enable it, reply with 'Enable auto top-up' or an equivalent phrase in your language:" },
     { "tag": "markdown", "content": "Enable auto top-up" }
   ]}
 }
 ```
 
-**Non-Feishu channel:** Send equivalent markdown/text: "API Key verified. Balance: ${balance} USD. Reply 'Enable auto top-up' to enable auto top-up, or ignore to skip."
+**Non-Feishu channel:** Send equivalent markdown/text: "API Key verified. Balance: ${balance} USD. Reply 'Enable auto top-up' or an equivalent phrase in your language to enable auto top-up, or ignore to skip."
 
 `check_balance` supports a `send_card` parameter. During activation, you MUST call it with `{"send_card":false}` so it only returns balance data and does not end the turn early. For normal user-facing balance checks, omit the parameter and let it send the standard balance notification.
 
@@ -206,12 +215,12 @@ Important:
 - In that mode, the agent owns the next configuration notification
 - In normal balance-check mode, if the tool direct-sends the balance notification, the agent MUST NOT send a second balance notification
 
-**Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "Enable auto top-up".
+**Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly asks to enable auto top-up in the current turn. Match semantic intent in the user's language; do NOT require the exact text "Enable auto top-up".
 
-**If user replies "Enable auto top-up":**
+**If the user explicitly asks to enable auto top-up** (for example, "Enable auto top-up", "开启自动充值", or equivalent wording in their language):
 1. **MANDATORY CHECK**: You MUST execute the `exec` tool with the command `ls -la ~/.openclaw/workspace/skills/agent-payment-skills` to physically verify if the payment skill is installed. DO NOT rely on your conversation memory.
 2. **If the directory DOES NOT exist**:
-   - Treat the user's explicit "Enable auto top-up" request as explicit authorization to install the missing dependency skill immediately.
+   - Treat the user's explicit auto top-up request as explicit authorization to install the missing dependency skill immediately.
    - Do NOT stop at a missing-skill warning or an install URL notification.
    - Immediately download/install `agent-payment-skills` and initiate its installation flow.
    - Note that installation involves a gateway restart. After the restart completes and the user finishes the wallet initialization and card binding (which will span across multiple conversation turns), you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending auto-pay configuration flow now.`
@@ -246,7 +255,7 @@ After payment handoff:
 - Current implementation persists pending auto-pay tasks under `~/.openclaw/state/modelmax-media/pending-auto-pay-task.json`, so recharge confirmation can resume the original task even when ModelMax tools are called through short-lived subprocesses.
 - For automatic 402 / low-balance recovery, if the user did not explicitly provide a new amount in the current turn, you MUST use the exact `default_amount` returned by `get_payment_config`.
 
-**If user does not reply "Enable auto top-up" (any other reply, or no reply, or silence):**
+**If the user does not explicitly ask to enable auto top-up** (any other reply, or no reply, or silence):
 Do nothing — auto-pay remains disabled. Do NOT send any additional notification. Move on.
 
 ### 3. Uninstall
