@@ -14,10 +14,9 @@ permissions:
   - system
 ---
 
-Local API key storage:
+Local skill config storage:
 
-- `MODELMAX_API_KEY` is stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
-- `MODELMAX_AUTO_PAY` is also stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
+- `MODELMAX_API_KEY` and `MODELMAX_AUTO_PAY` are stored in `~/.openclaw/workspace/skills/modelmax-media/modelmax.config.json`
 - Neither value is stored in `openclaw.json`
 
 # ModelMax MCP Server
@@ -52,9 +51,9 @@ Exactly one layer owns each semantic card. Do NOT duplicate card delivery.
 | Install complete | pre_install.mjs | Registers MCP and sends exactly one install success notification |
 | API key activation summary | modelmax tool | `activate_api_key` owns the single configuration/auto-pay prompt notification |
 | Balance check with `send_card:false` | tool | Returns data only; agent must decide the next notification |
-| Payment-layer `✅ 支付成功` | payment skill | ModelMax skill MUST NOT send another payment-success notification |
-| `check_recharge_status` credited/paid | modelmax tool | Tool owns `✅ 充值成功` and pending-task resume |
-| `check_recharge_status` failed/refunded | modelmax tool | Tool owns `❌ 充值失败` |
+| Payment-layer `✅ Payment Successful` | payment skill | ModelMax skill MUST NOT send another payment-success notification |
+| `check_recharge_status` credited/paid | modelmax tool | Tool owns `✅ Recharge Successful` and pending-task resume |
+| `check_recharge_status` failed/refunded | modelmax tool | Tool owns `❌ Recharge Failed` |
 | Generated image/video delivery | modelmax tool + `send-message.mjs` | Tool delivers directly through the unified sender |
 
 ## Install Authorization Rule (Hard Rule)
@@ -67,9 +66,9 @@ Exactly one layer owns each semantic card. Do NOT duplicate card delivery.
 
 For ModelMax, `check_recharge_status` is the only owner of merchant-layer recharge result notifications.
 
-- No other layer may send `✅ 充值成功` for the same `order_id`.
-- No other layer may send `❌ 充值失败` for the same `order_id`.
-- Payment-layer `✅ 支付成功` belongs to the payment skill, not ModelMax.
+- No other layer may send `✅ Recharge Successful` for the same `order_id`.
+- No other layer may send `❌ Recharge Failed` for the same `order_id`.
+- Payment-layer `✅ Payment Successful` belongs to the payment skill, not ModelMax.
 
 ## Tool Return Contract (Hard Rule)
 
@@ -87,9 +86,9 @@ For ModelMax, `check_recharge_status` is the only owner of merchant-layer rechar
 
 ## Prohibited Behaviors (Hard Rule)
 
-- Do NOT send `✅ 充值成功` before `check_recharge_status` confirms `credited=true` or `status=paid`.
-- Do NOT send a second `✅ 充值成功` or `❌ 充值失败` notification for the same `order_id`.
-- Do NOT send a payment-layer `✅ 支付成功` notification from ModelMax; that belongs to the payment skill.
+- Do NOT send `✅ Recharge Successful` before `check_recharge_status` confirms `credited=true` or `status=paid`.
+- Do NOT send a second `✅ Recharge Successful` or `❌ Recharge Failed` notification for the same `order_id`.
+- Do NOT send a payment-layer `✅ Payment Successful` notification from ModelMax; that belongs to the payment skill.
 - Do NOT infer recovery state from chat memory when `pending-auto-pay-task.json` or tool output is available.
 - Do NOT paraphrase the full notification contents after the notification is already sent.
 
@@ -101,8 +100,9 @@ There are only two valid amount sources for ModelMax recharge:
    - If the user explicitly provides a concrete recharge amount in the current turn, you MUST use that amount.
    - This user-specified amount overrides the merchant default.
 
-2. Merchant default
-   - If the user does not explicitly provide a concrete recharge amount in the current turn, you MUST call `get_payment_config` and use the returned `default_amount` exactly as-is.
+2. Merchant default (Direct Mode Only)
+   - In Direct Mode (no `sessionId` provided by the 402 error), if the user does not explicitly provide a concrete recharge amount in the current turn, you MUST call `get_payment_config` and use the returned `default_amount` exactly as-is.
+   - In Session Mode (when the 402 error provides a `sessionId`), do NOT provide an amount and do NOT call `get_payment_config`. The amount is already bound to the session.
 
 You MUST NOT invent a third amount from memory, prior turns, habit, or judgment.
 You MUST NOT replace the merchant default with `1`, `5`, or any other arbitrary amount unless the user explicitly asked for that amount in the current turn.
@@ -111,17 +111,16 @@ You MUST NOT replace the merchant default with `1`, `5`, or any other arbitrary 
 
 ModelMax should drive its own Clink payment flow and call `agent-payment-skills.clink_pay` directly.
 
-- The `merchant_integration.server` value MUST match the currently registered ModelMax MCP server name exactly.
-- Do NOT hardcode `modelmax-media` or `modelmax-media-generation` in this section unless that is the actual registered name in `mcporter`.
+- The `merchant_integration.server` value MUST match the server name provided in the HTTP 402 Auto-Pay SYSTEM DIRECTIVE. Do NOT guess or hardcode this value.
 
 - For session-mode flows, pass:
   - `sessionId`
-  - `merchant_integration: {"server":"<registered-modelmax-server>","confirm_tool":"check_recharge_status","confirm_args":{}}`
+  - `merchant_integration: {"server":"<VALUE_FROM_DIRECTIVE>","confirm_tool":"check_recharge_status","confirm_args":{}}`
 - For direct-mode flows, call `get_payment_config` first, then pass:
   - `merchant_id`
   - `amount`
   - `currency`
-  - `merchant_integration: {"server":"<registered-modelmax-server>","confirm_tool":"check_recharge_status","confirm_args":{}}`
+  - `merchant_integration: {"server":"<VALUE_FROM_DIRECTIVE>","confirm_tool":"check_recharge_status","confirm_args":{}}`
 
 ## Sending Notifications
 
@@ -187,17 +186,17 @@ Where `<CARD_JSON>` is the following structure with `{balance}` replaced by the 
 ```json
 {
   "schema": "2.0",
-  "header": { "title": { "content": "ModelMax 配置", "tag": "plain_text" }, "template": "blue" },
+  "header": { "title": { "content": "ModelMax Configuration", "tag": "plain_text" }, "template": "blue" },
   "body": { "elements": [
-    { "tag": "markdown", "content": "**API Key 状态**　<font color='green'>已验证 ✓</font>\n**当前余额**　　<font color='green'>{balance} USD</font>\n**自动充值**　　<font color='grey'>未开启</font>" },
+    { "tag": "markdown", "content": "**API Key Status**  <font color='green'>Verified ✓</font>\n**Current Balance**  <font color='green'>{balance} USD</font>\n**Auto Top-Up**  <font color='grey'>Disabled</font>" },
     { "tag": "hr" },
-    { "tag": "markdown", "content": "当余额不足时，自动充值可无感续费，避免图片/视频生成任务中断。默认不开启。如需开启，请在输入框回复「开启自动充值」：" },
-    { "tag": "markdown", "content": "开启自动充值" }
+    { "tag": "markdown", "content": "When your balance runs low, auto top-up keeps image and video generation from being interrupted. It is disabled by default. To enable it, reply with 'Enable auto top-up':" },
+    { "tag": "markdown", "content": "Enable auto top-up" }
   ]}
 }
 ```
 
-**Non-Feishu channel:** Send equivalent markdown/text: "API Key verified. Balance: ${balance} USD. Reply '开启自动充值' to enable auto top-up, or ignore to skip."
+**Non-Feishu channel:** Send equivalent markdown/text: "API Key verified. Balance: ${balance} USD. Reply 'Enable auto top-up' to enable auto top-up, or ignore to skip."
 
 `check_balance` supports a `send_card` parameter. During activation, you MUST call it with `{"send_card":false}` so it only returns balance data and does not end the turn early. For normal user-facing balance checks, omit the parameter and let it send the standard balance notification.
 
@@ -207,15 +206,15 @@ Important:
 - In that mode, the agent owns the next configuration notification
 - In normal balance-check mode, if the tool direct-sends the balance notification, the agent MUST NOT send a second balance notification
 
-**Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "开启自动充值".
+**Default behavior: do NOT enable auto-pay.** Only proceed if the user explicitly replies with the exact text "Enable auto top-up".
 
-**If user replies "开启自动充值":**
+**If user replies "Enable auto top-up":**
 1. **MANDATORY CHECK**: You MUST execute the `exec` tool with the command `ls -la ~/.openclaw/workspace/skills/agent-payment-skills` to physically verify if the payment skill is installed. DO NOT rely on your conversation memory.
 2. **If the directory DOES NOT exist**:
-   - Treat the user's explicit "开启自动充值" request as explicit authorization to install the missing dependency skill immediately.
+   - Treat the user's explicit "Enable auto top-up" request as explicit authorization to install the missing dependency skill immediately.
    - Do NOT stop at a missing-skill warning or an install URL notification.
-   - Immediately download/install `agent-payment-skills` and follow its installation flow completely (pre_install → restart → wallet init + card binding).
-   - Once initialization is confirmed complete, you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending 402 auto-pay flow now.`
+   - Immediately download/install `agent-payment-skills` and initiate its installation flow.
+   - Note that installation involves a gateway restart. After the restart completes and the user finishes the wallet initialization and card binding (which will span across multiple conversation turns), you MUST inject this context update into the current flow before proceeding: `agent-payment-skills is now installed and initialized for this user; wallet and card setup completed; resume the pending auto-pay configuration flow now.`
    - After that context update is established, proceed to step 3 immediately. Do NOT restart the install check loop.
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
    - Call `agent-payment-skills.pre_check_account` (do NOT omit --args):
@@ -230,7 +229,7 @@ Important:
    - After sending this notification, you may continue with a short natural-language reply.
 
 **During later 402 auto-pay recovery:**
-- `payment handoff` means the payment layer has confirmed successful payment and provided a structured `payment_handoff` payload for merchant到账确认.
+- `payment handoff` means the payment layer has confirmed successful payment and provided a structured `payment_handoff` payload for merchant recharge confirmation.
 - For session-based recovery, call `agent-payment-skills.clink_pay` with `sessionId` and `merchant_integration`.
 - For direct-mode recovery, call `get_payment_config` first, then call `agent-payment-skills.clink_pay` with `merchant_id`, `amount`, `currency`, and `merchant_integration`.
 - If a later payment handoff arrives, you MUST pass its `payment_handoff` object through to `check_recharge_status` exactly as received.
@@ -239,15 +238,15 @@ Important:
 
 After payment handoff:
 1. Call `check_recharge_status` exactly once.
-2. If `check_recharge_status` direct-sent `✅ 充值成功`, do NOT send another recharge-success notification.
-3. If `check_recharge_status` direct-sent `❌ 充值失败`, do NOT send another failure notification.
+2. If `check_recharge_status` direct-sent `✅ Recharge Successful`, do NOT send another recharge-success notification.
+3. If `check_recharge_status` direct-sent `❌ Recharge Failed`, do NOT send another failure notification.
 4. If `check_recharge_status` returns an explicit exec directive, execute it exactly once.
-5. Resume the pending image/video task only after recharge confirmation succeeds.
+5. The `check_recharge_status` tool will automatically resume the pending image/video task upon success. Do NOT manually resume the task yourself unless the tool explicitly instructs you to.
 
 - Current implementation persists pending auto-pay tasks under `~/.openclaw/state/modelmax-media/pending-auto-pay-task.json`, so recharge confirmation can resume the original task even when ModelMax tools are called through short-lived subprocesses.
 - For automatic 402 / low-balance recovery, if the user did not explicitly provide a new amount in the current turn, you MUST use the exact `default_amount` returned by `get_payment_config`.
 
-**If user does not reply "开启自动充值" (any other reply, or no reply, or silence):**
+**If user does not reply "Enable auto top-up" (any other reply, or no reply, or silence):**
 Do nothing — auto-pay remains disabled. Do NOT send any additional notification. Move on.
 
 ### 3. Uninstall
