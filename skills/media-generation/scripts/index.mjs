@@ -1293,20 +1293,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Structured payment success handoff from agent-payment-skills.",
               properties: {
                 order_id: { type: "string" },
-                    ,locale: { type: "string" }
-
                 session_id: { type: "string" },
-                    ,locale: { type: "string" }
-
                 trigger_source: { type: "string" },
                 channel: { type: "string" },
                 notify_target: {
                   type: "object",
                   properties: {
                     type: { type: "string" },
-                    id: { type: "string" }
-                    ,locale: { type: "string" }
-
+                    id: { type: "string" },
+                    locale: { type: "string" }
                   },
                   required: ["type", "id"]
                 }
