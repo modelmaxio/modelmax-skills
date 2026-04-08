@@ -46,6 +46,7 @@ const PENDING_AUTO_PAY_TASK_PATH = path.join(STATE_DIR, "pending-auto-pay-task.j
 const ERROR_LOG_PATH = path.join(SKILL_DIR, "error.log");
 const OPENCLAW_CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || path.join(OPENCLAW_DIR, "openclaw.json");
 const MCPORTER_CONFIG_PATH = path.join(OPENCLAW_DIR, "config", "mcporter.json");
+const MCPORTER_CALL_TIMEOUT_MS = 300000;
 // Persist pending auto-pay tasks so the recharge-confirmation flow still works
 // when ModelMax tools are invoked through short-lived mcporter subprocesses.
 
@@ -356,7 +357,7 @@ function buildNotificationExecCommand(messageRequest, notifyTarget) {
 }
 
 function buildMcporterCallCommand(server, tool, argsJson) {
-  return `npx mcporter --config ${shellQuote(MCPORTER_CONFIG_PATH)} call ${server} ${tool} --args ${shellQuote(argsJson)}`;
+  return `npx mcporter --config ${shellQuote(MCPORTER_CONFIG_PATH)} call --timeout ${MCPORTER_CALL_TIMEOUT_MS} ${server} ${tool} --args ${shellQuote(argsJson)}`;
 }
 
 function cloneJson(value) {

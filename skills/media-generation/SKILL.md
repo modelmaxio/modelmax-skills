@@ -23,7 +23,7 @@ Local skill config storage:
 
 ## 🚫 ALWAYS USE mcporter — NEVER CALL API DIRECTLY
 
-> **ALWAYS call `generate_image` and `generate_video` via `npx mcporter --config "$MCPORTER_CONFIG_PATH" call`. Do NOT omit `--args`. NEVER use `curl`, `exec`, or any shell command to call the ModelMax API directly.**
+> **ALWAYS call `generate_image` and `generate_video` via `npx mcporter --config "$MCPORTER_CONFIG_PATH" call`. Do NOT omit `--args`. For long-running media generation, ALWAYS pass `--timeout 300000` so mcporter does not hit its default 60s call timeout. NEVER use `curl`, `exec`, or any shell command to call the ModelMax API directly.**
 
 ```bash
 MCPORTER_CONFIG_PATH="${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json"
@@ -32,13 +32,15 @@ MCPORTER_CONFIG_PATH="${OPENCLAW_HOME:-$HOME}/.openclaw/config/mcporter.json"
 # Do NOT hardcode a stale alias in payment handoff or tool calls.
 
 # Generate image
-npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> generate_image --args '{"prompt":"<PROMPT>","channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
+npx mcporter --config "$MCPORTER_CONFIG_PATH" call --timeout 300000 <modelmax-server> generate_image --args '{"prompt":"<PROMPT>","channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
 
 # Generate video
-npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> generate_video --args '{"prompt":"<PROMPT>","resolution":"720p","duration_seconds":5,"channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
+npx mcporter --config "$MCPORTER_CONFIG_PATH" call --timeout 300000 <modelmax-server> generate_video --args '{"prompt":"<PROMPT>","resolution":"720p","duration_seconds":5,"channel":"feishu","target_id":"<CHAT_ID>","target_type":"chat_id"}'
 ```
 
 Note: 1080p and 4k resolution videos MUST use `duration_seconds: 8`.
+
+Note: `mcporter call` defaults to a 60s timeout. Use `--timeout 300000` for ModelMax media generation so video polling can finish.
 
 After sending a notification or media item, you may continue with a short natural-language reply when the surrounding workflow needs it. Do not force `NO_REPLY` unless a specific tool result explicitly requires it.
 
@@ -165,13 +167,13 @@ When the user activates this skill, you MUST follow these steps in order:
 3. **Handle pasted API Key immediately:** If the user's next message looks like a ModelMax API key (for example starts with `sk-`), you MUST treat it as the activation payload and continue the flow in the same turn. Do NOT stop after acknowledging receipt.
    - First run `activate_api_key` and pass the current notify target so the tool can send the activation summary directly:
      ```bash
-     npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> activate_api_key --args '{"api_key":"<PASTED_KEY>","channel":"<CHANNEL>","target_id":"<TARGET_ID>","target_type":"<TARGET_TYPE>"}'
+     npx mcporter --config "$MCPORTER_CONFIG_PATH" call --timeout 300000 <modelmax-server> activate_api_key --args '{"api_key":"<PASTED_KEY>","channel":"<CHANNEL>","target_id":"<TARGET_ID>","target_type":"<TARGET_TYPE>"}'
      ```
    - If the tool returns `DIRECT_SEND`, do NOT send another activation/configuration notification.
    - After the tool succeeds, you may continue with a short natural-language reply.
 4. **Verify API Key:** Once the API Key is configured in the local skill config file (or if it is already present in the environment), you MUST immediately call `check_balance` with `send_card: false` (do NOT omit --args):
    ```
-   npx mcporter --config "$MCPORTER_CONFIG_PATH" call <modelmax-server> check_balance --args '{"send_card":false}'
+   npx mcporter --config "$MCPORTER_CONFIG_PATH" call --timeout 300000 <modelmax-server> check_balance --args '{"send_card":false}'
    ```
    If `check_balance` returns an error, inform the user to re-check their API key.
 
@@ -213,7 +215,7 @@ Important:
 3. **If the directory EXISTS** (or after it has been successfully installed and initialized per step 2):
    - Call `agent-payment-skills.pre_check_account` (do NOT omit --args):
      ```
-     npx mcporter --config "$MCPORTER_CONFIG_PATH" call agent-payment-skills pre_check_account --args '{}'
+     npx mcporter --config "$MCPORTER_CONFIG_PATH" call --timeout 300000 agent-payment-skills pre_check_account --args '{}'
      ```
    - **If pre_check_account fails** (wallet not initialized or no card bound): Follow the `agent-payment-skills` initialization instructions to fix the issue (initialize wallet / bind card) before proceeding. DO NOT enable auto top-up until pre-check passes.
    - **If pre_check_account passes**: IMMEDIATELY use the `exec` tool to run: `node {SKILL_DIR}/scripts/set-auto-pay.mjs true`
