@@ -7,6 +7,7 @@ import {
   compileMessage,
   normalizeMessageRequest,
   renderMessageFeishuCard,
+  renderMessageTelegramCard,
   renderMessageMarkdown,
   renderMessagePlainText,
   resolvePreferredLocale,
@@ -25,7 +26,7 @@ const LOG_PATH = path.join(SKILL_DIR, 'error.log');
 
 const CHANNEL_CAPABILITIES = Object.freeze({
   feishu: { rich: true, textMode: 'plain' },
-  telegram: { rich: false, textMode: 'markdown' },
+  telegram: { rich: true, textMode: 'markdown' },
 });
 
 function logScriptError(context, error) {
@@ -125,6 +126,37 @@ function sendFeishuCard(payload, compiled) {
   );
 }
 
+function buildTelegramButtons(telegramCard) {
+  const actions = Array.isArray(telegramCard?.card?.actions) ? telegramCard.card.actions : [];
+  const rows = [];
+  actions.forEach((action) => {
+    if (!action || typeof action !== 'object') return;
+    const label = typeof action.label === 'string' ? action.label.trim() : '';
+    const url = typeof action.url === 'string' ? action.url.trim() : '';
+    if (!label || !url) return;
+    rows.push([{ text: label, url }]);
+  });
+  return rows;
+}
+
+function sendTelegramCard(payload, compiled) {
+  const { targetId } = normalizeTarget(payload);
+  const telegramCard = renderMessageTelegramCard(compiled);
+  const text = resolveText(compiled, 'telegram');
+  const mediaUrl = typeof telegramCard?.card?.media?.url === 'string' && telegramCard.card.media.url.trim()
+    ? telegramCard.card.media.url.trim()
+    : '';
+  const buttons = buildTelegramButtons(telegramCard);
+  if (!text && !mediaUrl) {
+    throw new Error('No Telegram card content available for delivery');
+  }
+  const args = ['message', 'send', '--channel', 'telegram', '--target', targetId];
+  if (mediaUrl) args.push('--media', mediaUrl);
+  if (text) args.push('--message', text);
+  if (buttons.length > 0) args.push('--buttons', JSON.stringify(buttons));
+  execFileSync('openclaw', args, { encoding: 'utf8', stdio: 'pipe', timeout: 30000 });
+}
+
 function sendFeishuMedia(payload, compiled) {
   const { targetId, targetType } = normalizeTarget(payload);
   if (targetType !== 'chat_id' && targetType !== 'open_id') {
@@ -211,6 +243,17 @@ async function main() {
       }
     }
   }
+  if (channel === 'telegram' && compiled && capability.rich && deliveryPolicy.prefer_rich) {
+    try {
+      sendTelegramCard(payload, compiled);
+      return;
+    } catch (error) {
+      logScriptError('scripts/send-message/telegram-rich', error);
+      if (!deliveryPolicy.allow_fallback) {
+        throw error;
+      }
+    }
+  }
   sendViaOpenClawMessage(payload, compiled);
 }
 
@@ -219,4 +262,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
-

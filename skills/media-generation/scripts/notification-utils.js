@@ -83,7 +83,18 @@ function normalizeAction(action) {
   return { type, label, url };
 }
 
-function buildModel({ key, locale, title, theme = 'blue', summary = '', facts = [], sections = [], actions = [], footer = '' }) {
+function buildModel({
+  key,
+  locale,
+  title,
+  theme = 'blue',
+  summary = '',
+  facts = [],
+  sections = [],
+  actions = [],
+  footer = '',
+  media = null,
+}) {
   const model = {
     key,
     locale,
@@ -94,6 +105,9 @@ function buildModel({ key, locale, title, theme = 'blue', summary = '', facts = 
     sections: sections.map(normalizeSection).filter(Boolean),
     actions: actions.map(normalizeAction).filter(Boolean),
     footer: toStringValue(footer),
+    media: media && typeof media === 'object' && !Array.isArray(media)
+      ? JSON.parse(JSON.stringify(media))
+      : null,
   };
   model.fallback_text = renderMessagePlainText(model);
   return model;
@@ -442,6 +456,29 @@ export function renderMessageFeishuCard(input, options = {}) {
   };
 }
 
+export function renderMessageTelegramCard(input, options = {}) {
+  const model = input?.message_key ? compileMessage(input, options) : input;
+  return {
+    schema: 'telegram-card/v1',
+    version: 1,
+    mode: model.media ? 'media_card' : 'text_card',
+    card: {
+      title: model.title,
+      theme: model.theme,
+      summary: model.summary,
+      facts: model.facts.map((fact) => ({ label: fact.label, value: fact.value })),
+      sections: model.sections.map((section) => ({ type: section.type, text: section.text })),
+      actions: model.actions.map((action) => ({
+        type: action.type,
+        label: action.label,
+        ...(action.url ? { url: action.url } : {}),
+      })),
+      ...(model.footer ? { footer: model.footer } : {}),
+      ...(model.media ? { media: model.media } : {}),
+    },
+  };
+}
+
 export function normalizeMessageRequest(value, { preferredLocale = 'auto' } = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Message request payload must be an object');
@@ -469,4 +506,3 @@ export function buildMessagePreview(input, options = {}) {
     markdown: renderMessageMarkdown(model),
   };
 }
-

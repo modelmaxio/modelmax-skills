@@ -1339,7 +1339,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            channel: { type: "string", description: "Optional notify channel. Feishu supports native cards; other channels receive markdown/text notifications." },
+            channel: { type: "string", description: "Optional notify channel. Feishu and Telegram support native cards; other channels receive markdown/text notifications." },
             target_id: { type: "string", description: "Optional notify target ID for uninstall notification delivery." },
             target_type: { type: "string", description: "Optional notify target type. For Feishu use chat_id or open_id." },
             locale: { type: "string", description: "Optional BCP 47 locale hint for notification localization, e.g. zh-CN or en-US." }
