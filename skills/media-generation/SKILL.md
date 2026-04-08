@@ -134,7 +134,7 @@ node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"feishu","target
 node {SKILL_DIR}/scripts/send-message.mjs --payload '{"channel":"telegram","target":{"type":"target_id","id":"12345","locale":"en-US"},"message_key":"install.success","vars":{}}'
 ```
 
-The sender renders Feishu cards for Feishu, Telegram cards for Telegram, and Markdown/text fallback for other channels.
+The sender renders Feishu cards for Feishu, rich Telegram text/media for Telegram, and Markdown/text fallback for other channels.
 
 ## Features
 
